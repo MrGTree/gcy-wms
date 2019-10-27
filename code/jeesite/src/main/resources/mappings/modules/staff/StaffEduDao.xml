@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.staff.dao.StaffEduDao">
+    
+	<sql id="staffEduColumns">
+		a.id AS "id",
+		a.staff_id AS "staffId",
+		a.school_name AS "schoolName",
+		a.start_data AS "startData",
+		a.end_data AS "endData",
+		a.is_tongzhao AS "isTongzhao",
+		a.zhuanye AS "zhuanye",
+		a.xueli AS "xueli",
+		a.files AS "files",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag"
+	</sql>
+	
+	<sql id="staffEduJoins">
+		LEFT JOIN sys_user u2 ON u2.id = a.staff_id
+	</sql>
+    
+	<select id="get" resultType="StaffEdu">
+		SELECT 
+			<include refid="staffEduColumns"/>
+		FROM staff_edu a
+		<include refid="staffEduJoins"/>
+		WHERE a.id = #{id}
+	</select>
+
+	<select id="getByStaffId" resultType="StaffEdu">
+		SELECT
+		<include refid="staffEduColumns"/>
+		FROM staff_edu a
+		<include refid="staffEduJoins"/>
+		WHERE a.staff_id = #{staffId} AND a.del_flag = '0';
+	</select>
+
+	<select id="getListByStaffId" resultType="StaffEdu">
+		SELECT
+		<include refid="staffEduColumns"/>
+		FROM staff_edu a
+		<include refid="staffEduJoins"/>
+		<where>
+			a.del_flag = '0' And a.staff_id =#{staffId}
+		</where>
+	</select>
+	
+	<select id="findList" resultType="StaffEdu">
+		SELECT 
+			<include refid="staffEduColumns"/>
+		FROM staff_edu a
+		<include refid="staffEduJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffEdu">
+		SELECT 
+			<include refid="staffEduColumns"/>
+		FROM staff_edu a
+		<include refid="staffEduJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_edu(
+			id,
+			staff_id,
+			school_name,
+			start_data,
+			end_data,
+			is_tongzhao,
+			zhuanye,
+			xueli,
+			files,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{staffId},
+			#{schoolName},
+			#{startData},
+			#{endData},
+			#{isTongzhao},
+			#{zhuanye},
+			#{xueli},
+			#{files},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_edu SET 	
+			staff_id = #{staffId},
+			school_name = #{schoolName},
+			start_data = #{startData},
+			end_data = #{endData},
+			is_tongzhao = #{isTongzhao},
+			zhuanye = #{zhuanye},
+			xueli = #{xueli},
+			files = #{files},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE staff_edu SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+</mapper>

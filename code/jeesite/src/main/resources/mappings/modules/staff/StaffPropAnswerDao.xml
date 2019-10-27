@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.staff.dao.StaffPropAnswerDao">
+    
+	<sql id="staffPropAnswerColumns">
+		a.id AS "id",
+		a.staff_id AS "staffId",
+		a.template_id AS "templateId",
+		a.staff_prop_id AS "staffPropId",
+		a.staff_prop_val AS "staffPropVal",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag",
+		a.UUID AS "UUID"
+	</sql>
+	
+	<sql id="staffPropAnswerJoins">
+	</sql>
+    
+	<select id="get" resultType="StaffPropAnswer">
+		SELECT 
+			<include refid="staffPropAnswerColumns"/>
+		FROM staff_prop_answer a
+		<include refid="staffPropAnswerJoins"/>
+		WHERE a.id = #{id}
+	</select>
+
+	<select id="getListByStaffIdAndTemplateId" resultType="StaffPropAnswer">
+		SELECT
+			<include refid="staffPropAnswerColumns"/>
+		FROM staff_prop_answer a
+		<include refid="staffPropAnswerJoins"/>
+		WHERE a.staff_id = #{staffId}
+		and a.template_id = #{templateId}
+		AND a.del_flag = '0'
+	</select>
+
+	<select id="getByEntity" resultType="StaffPropAnswer">
+		SELECT
+			<include refid="staffPropAnswerColumns"/>
+		FROM staff_prop_answer a
+			<include refid="staffPropAnswerJoins"/>
+		<where>
+			<if test="staffId != null and staffId != ''">
+				a.staff_id = #{staffId}
+			</if>
+			AND a.del_flag = '0'
+			<if test="templateId != null and templateId != ''">
+				AND a.template_id = #{templateId}
+			</if>
+			<if test="staffPropId != null and staffPropId != ''">
+				AND a.staff_prop_id = #{staffPropId}
+			</if>
+			<if test="UUID != null and UUID != ''">
+				AND a.UUID = #{UUID}
+			</if>
+		</where>
+	</select>
+
+	<update id="deleteStaffAllAnswer">
+		UPDATE staff_prop_answer SET
+		del_flag = #{DEL_FLAG_DELETE}
+		WHERE template_id = #{templateId}
+		And staff_id = #{staffId}
+		<if test="UUID != null and UUID != '' "  >
+			AND UUID = #{UUID}
+		</if>
+	</update>
+
+	<select id="getUUID" resultType="String">
+		SELECT
+			DISTINCT(UUID)
+		FROM
+			staff_prop_answer
+		WHERE
+			template_id = #{templateId}
+		AND staff_id = #{staffId}
+		AND del_flag = '0'
+	</select>
+
+	
+	<select id="findList" resultType="StaffPropAnswer">
+		SELECT 
+			<include refid="staffPropAnswerColumns"/>
+		FROM staff_prop_answer a
+		<include refid="staffPropAnswerJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffPropAnswer">
+		SELECT 
+			<include refid="staffPropAnswerColumns"/>
+		FROM staff_prop_answer a
+		<include refid="staffPropAnswerJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_prop_answer(
+			id,
+			staff_id,
+			template_id,
+			staff_prop_id,
+			UUID,
+			staff_prop_val,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{staffId},
+			#{templateId},
+			#{staffPropId},
+			#{UUID},
+			#{staffPropVal},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_prop_answer SET 	
+			staff_id = #{staffId},
+			template_id = #{templateId},
+			staff_prop_id = #{staffPropId},
+			UUID = #{UUID},
+			staff_prop_val = #{staffPropVal},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE staff_prop_answer SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+</mapper>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.sys.dao.StaffTemplateDao">
+    
+	<sql id="staffTemplateColumns">
+		a.id AS "id",
+		a.template_name AS "templateName",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag"
+	</sql>
+	
+	<sql id="staffTemplateJoins">
+	</sql>
+    
+	<select id="get" resultType="StaffTemplate">
+		SELECT 
+			<include refid="staffTemplateColumns"/>
+		FROM staff_template a
+		<include refid="staffTemplateJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="StaffTemplate">
+		SELECT 
+			<include refid="staffTemplateColumns"/>
+		FROM staff_template a
+		<include refid="staffTemplateJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffTemplate">
+		SELECT 
+			<include refid="staffTemplateColumns"/>
+		FROM staff_template a
+		<include refid="staffTemplateJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="findALLListNoPage" resultType="StaffTemplate">
+		SELECT
+		<include refid="staffTemplateColumns"/>
+		FROM staff_template a
+		<include refid="staffTemplateJoins"/>
+		<where>
+			a.del_flag = '0'
+		</where>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_template(
+			id,
+			template_name,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{templateName},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_template SET 	
+			template_name = #{templateName},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<!--<update id="delete">
+		UPDATE staff_template SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>-->
+	<delete id="delete">
+		DELETE FROM staff_template WHERE id = #{id}
+	</delete>
+	
+</mapper>

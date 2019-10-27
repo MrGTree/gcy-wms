@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.staff.dao.StaffRolePropDao">
+    
+	<sql id="staffRolePropColumns">
+		a.id AS "id",
+		a.role_id AS "roleId",
+		a.staff_prop_id AS "staffPropId",
+		a.template_id AS "templateId",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag"
+	</sql>
+	
+	<sql id="staffRolePropJoins">
+	</sql>
+    
+	<select id="get" resultType="StaffRoleProp">
+		SELECT 
+			<include refid="staffRolePropColumns"/>
+		FROM staff_role_prop a
+		<include refid="staffRolePropJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="StaffRoleProp">
+		SELECT 
+			<include refid="staffRolePropColumns"/>
+		FROM staff_role_prop a
+		<include refid="staffRolePropJoins"/>
+		WHERE a.del_flag = '0'
+		<if test="roleId != null and roleId != ''">
+			AND a.role_id = #{roleId}
+		</if>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffRoleProp">
+		SELECT 
+			<include refid="staffRolePropColumns"/>
+		FROM staff_role_prop a
+		<include refid="staffRolePropJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_role_prop(
+			id,
+			role_id,
+			staff_prop_id,
+			template_id,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{roleId},
+			#{staffPropId},
+			#{templateId},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_role_prop SET 	
+			role_id = #{roleId},
+			staff_prop_id = #{staffPropId},
+			template_id = #{templateId},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE staff_role_prop SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+
+	<!--
+		<delete id="deleteAllRoleProp">
+			DELETE FROM staff_role_prop
+			WHERE role_id = #{roleId}
+			AND template_id = #{templateId}
+		</delete>
+	-->
+	<!--
+		<update id="deleteAllRoleProp">
+			UPDATE staff_role_prop SET
+				del_flag = '1'
+			WHERE role_id = #{roleId}
+			AND template_id = #{templateId}
+		</update>
+	-->
+	<delete id="deleteAllRoleProp">
+		DELETE FROM staff_role_prop
+		WHERE role_id = #{roleId}
+		AND template_id = #{templateId}
+	</delete>
+	
+</mapper>
