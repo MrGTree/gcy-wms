@@ -1,2 +1,4 @@
 /jeesite.iml
 /.idea/
+/target/
+**/classes/
