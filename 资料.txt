@@ -1,0 +1,3 @@
+https://www.icourse163.org/course/CHD-1002012002 中国大学MOOC，网络视频监控技术
+http://www.easydarwin.org/ 
+https://github.com/EasyNVR/EasyNVR

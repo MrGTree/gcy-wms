@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.staff.dao.StaffWorkExpDao">
+    
+	<sql id="staffWorkExpColumns">
+		a.id AS "id",
+		a.staff_id AS "staffId",
+		a.corp_name AS "corpName",
+		a.hangye AS "hangye",
+		a.position AS "position",
+		a.start_data AS "startData",
+		a.end_data AS "endData",
+		a.files AS "files",
+		a.description AS "description",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag"
+	</sql>
+	
+	<sql id="staffWorkExpJoins">
+	</sql>
+    
+	<select id="get" resultType="StaffWorkExp">
+		SELECT 
+			<include refid="staffWorkExpColumns"/>
+		FROM staff_work_exp a
+		<include refid="staffWorkExpJoins"/>
+		WHERE a.id = #{id}
+	</select>
+
+	<select id="getListByStaffId" resultType="StaffWorkExp">
+		SELECT
+		<include refid="staffWorkExpColumns"/>
+		FROM staff_work_exp a
+		<include refid="staffWorkExpJoins"/>
+		<where>
+			a.del_flag = '0' And a.staff_id =#{staffId}
+		</where>
+	</select>
+	
+	<select id="findList" resultType="StaffWorkExp">
+		SELECT 
+			<include refid="staffWorkExpColumns"/>
+		FROM staff_work_exp a
+		<include refid="staffWorkExpJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffWorkExp">
+		SELECT 
+			<include refid="staffWorkExpColumns"/>
+		FROM staff_work_exp a
+		<include refid="staffWorkExpJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_work_exp(
+			id,
+			staff_id,
+			corp_name,
+			hangye,
+			position,
+			start_data,
+			end_data,
+			files,
+			description,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{staffId},
+			#{corpName},
+			#{hangye},
+			#{position},
+			#{startData},
+			#{endData},
+			#{files},
+			#{description},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_work_exp SET 	
+			staff_id = #{staffId},
+			corp_name = #{corpName},
+			hangye = #{hangye},
+			position = #{position},
+			start_data = #{startData},
+			end_data = #{endData},
+			files = #{files},
+			description = #{description},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE staff_work_exp SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+</mapper>

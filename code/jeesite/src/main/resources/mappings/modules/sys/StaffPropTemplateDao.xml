@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.sys.dao.StaffPropTemplateDao">
+    
+	<sql id="staffPropTemplateColumns">
+    
+		a.id AS "id",
+		a.template_id AS "templateId",
+		a.staff_prop_id AS "templatePropId",
+		a.staff_prop_type AS "templatePropType",
+		a.sort AS "sort",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag"
+	</sql>
+	
+	<sql id="staffPropTemplateJoins">
+	</sql>
+    
+	<select id="get" resultType="StaffPropTemplate">
+		SELECT 
+			<include refid="staffPropTemplateColumns"/>
+		FROM staff_prop_template a
+		<include refid="staffPropTemplateJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="StaffPropTemplate">
+		SELECT 
+			<include refid="staffPropTemplateColumns"/>
+		FROM staff_prop_template a
+		<include refid="staffPropTemplateJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffPropTemplate">
+		SELECT 
+			<include refid="staffPropTemplateColumns"/>
+		FROM staff_prop_template a
+		<include refid="staffPropTemplateJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_prop_template(
+			id,
+			template_id,
+			staff_prop_id,
+			staff_prop_type,
+			staff_dict_type,
+			sort,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{templateId},
+			#{staffPropId},
+			#{staffPropType},
+			#{staffDictType},
+			#{sort},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_prop_template SET 	
+			template_id = #{templateId},
+			staff_prop_id = #{templatePropId},
+			staff_prop_type = #{templatePropType},
+			sort = #{sort},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE staff_prop_template SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	  <resultMap id="staffPropTemplate" type="com.thinkgem.jeesite.modules.staff.entity.StaffPropTemplate">
+        <result column="template_id" property="templateId" javaType="String" jdbcType="VARCHAR"/>
+        <result column="template_name" property="templateName" javaType="String" jdbcType="VARCHAR"/>
+        <result column="staff_prop_id" property="staffPropId" javaType="String" jdbcType="VARCHAR"/>
+        <result column="staff_prop_name" property="staffPropName" javaType="String" jdbcType="VARCHAR"/>
+        <result column="staff_prop_type" property="staffPropType" javaType="String" jdbcType="VARCHAR"/>
+		<result column="staff_dict_type" property="staffDictType" javaType="String" jdbcType="VARCHAR"/>
+		<result column="sort" property="sort" javaType="Integer" jdbcType="DECIMAL"/>
+    </resultMap>
+
+    <select id="getTemplateListByTemplateId" resultMap="staffPropTemplate">
+		SELECT
+			a.id template_id,
+			a.template_name,
+			b.staff_prop_id,
+			b.staff_prop_type,
+			b.staff_dict_type,
+			b.sort
+		FROM
+			staff_template a,staff_prop_template b
+		WHERE
+			a.id = b.template_id
+			and b.template_id = #{template_id}
+	</select>
+
+	<delete id="deleteAllByTemplateId" >
+		DELETE FROM staff_prop_template
+		WHERE template_id = #{templateId}
+	</delete>
+</mapper>

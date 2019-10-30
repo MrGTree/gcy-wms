@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.staff.dao.StaffEvalDao">
+    
+	<sql id="staffEvalColumns">
+		a.id AS "id",
+		a.staff_id AS "staffId",
+		a.start_data AS "startData",
+		a.end_data AS "endData",
+		a.task_count AS "taskCount",
+		a.bug_count AS "bugCount",
+		a.efficiency AS "efficiency",
+		a.good AS "good",
+		a.good_explain AS "goodExplain",
+		a.bad AS "bad",
+		a.bad_explain AS "badExplain",
+		a.eval_explain AS "evalExplain",
+		a.ext_colum1 AS "extColum1",
+		a.ext_colum2 AS "extColum2",
+		a.ext_colum3 AS "extColum3",
+		a.ext_colum4 AS "extColum4",
+		a.ext_colum5 AS "extColum5",
+		a.office_id AS "office.id",
+		a.eval_operation AS "evalOperation",
+		a.eval_date AS "evalDate",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag",
+		a.eval_office_id AS "evalOfficeId"
+	</sql>
+	
+	<sql id="staffEvalJoins">
+		JOIN sys_office o ON o.id = a.office_id
+		JOIN sys_user u ON u.id = a.create_by
+	</sql>
+    
+	<select id="get" resultType="StaffEval">
+		SELECT 
+			<include refid="staffEvalColumns"/>
+		FROM staff_eval a
+		<include refid="staffEvalJoins"/>
+		WHERE a.id = #{id}
+	</select>
+
+	<select id="getByStaffId" resultType="StaffEval">
+		SELECT
+		<include refid="staffEvalColumns"/>
+		FROM staff_eval a
+		<include refid="staffEvalJoins"/>
+		WHERE a.staff_id = #{staffId} AND a.del_flag = '0'
+	</select>
+
+	<select id="getListByStaffId" parameterType="StaffEval" resultType="StaffEval">
+		SELECT
+		<include refid="staffEvalColumns"/>
+		FROM staff_eval a
+		<include refid="staffEvalJoins"/>
+		JOIN sys_office oo ON oo.id = a.eval_office_id
+		<where>
+			a.del_flag = '0'
+			<if test="evalOfficeId != null and evalOfficeId != ''">
+				AND (a.eval_office_id = #{evalOfficeId} OR oo.parent_ids LIKE
+				<if test="dbName == 'oracle'">'%,'||#{evalOfficeId}||',%')</if>
+				<if test="dbName == 'mssql'">'%,'+#{evalOfficeId}+',%')</if>
+				<if test="dbName == 'mysql'">CONCAT('%,', #{evalOfficeId}, ',%'))</if>
+			</if>
+			<if test="staffId != null and staffId != '' ">
+				AND a.staff_id =#{staffId}
+			</if>
+			<if test="startData != null and startData != ''">
+				AND a.start_data &gt;= #{startData}
+			</if>
+			<if test="endData != null and endData != ''">
+				AND a.end_data &lt;= #{endData}
+			</if>
+		</where>
+		${sqlMap.dsf}
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY startData,endData
+			</otherwise>
+		</choose>
+	</select>
+
+
+	<select id="getStaffGoodCount" resultType="Integer">
+		SELECT COUNT(good)
+		FROM staff_eval
+		WHERE staff_id = #{staffId}
+		AND del_flag = '0'
+	</select>
+
+	<select id="getStaffBadCount" resultType="Integer">
+		SELECT COUNT(bad)
+		FROM staff_eval
+		WHERE staff_id = #{staffId}
+		AND del_flag = '0'
+	</select>
+
+	<select id="getStaffBugCount" resultType="Integer">
+		SELECT SUM(bug_count)
+		FROM staff_eval
+		WHERE staff_id = #{staffId}
+		AND del_flag = '0'
+	</select>
+
+
+
+	<select id="findList" resultType="StaffEval">
+		SELECT 
+			<include refid="staffEvalColumns"/>
+		FROM staff_eval a
+		<include refid="staffEvalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="StaffEval">
+		SELECT 
+			<include refid="staffEvalColumns"/>
+		FROM staff_eval a
+		<include refid="staffEvalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO staff_eval(
+			id,
+			staff_id,
+			start_data,
+			end_data,
+			task_count,
+			bug_count,
+			efficiency,
+			good,
+			good_explain,
+			bad,
+			bad_explain,
+			eval_explain,
+			ext_colum1,
+			ext_colum2,
+			ext_colum3,
+			ext_colum4,
+			ext_colum5,
+			office_id,
+			eval_operation,
+			eval_date,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag,
+			eval_office_id
+		) VALUES (
+			#{id},
+			#{staffId},
+			#{startData},
+			#{endData},
+			#{taskCount},
+			#{bugCount},
+			#{efficiency},
+			#{good},
+			#{goodExplain},
+			#{bad},
+			#{badExplain},
+			#{evalExplain},
+			#{extColum1},
+			#{extColum2},
+			#{extColum3},
+			#{extColum4},
+			#{extColum5},
+			#{office.id},
+			#{evalOperation},
+			#{evalDate},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag},
+			#{evalOfficeId}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE staff_eval SET 	
+			staff_id = #{staffId},
+			start_data = #{startData},
+			end_data = #{endData},
+			task_count = #{taskCount},
+			bug_count = #{bugCount},
+			efficiency = #{efficiency},
+			good = #{good},
+			good_explain = #{goodExplain},
+			bad = #{bad},
+			bad_explain = #{badExplain},
+			eval_explain = #{evalExplain},
+			eval_office_id = #{evalOfficeId},
+			ext_colum1 = #{extColum1},
+			ext_colum2 = #{extColum2},
+			ext_colum3 = #{extColum3},
+			ext_colum4 = #{extColum4},
+			ext_colum5 = #{extColum5},
+			office_id = #{office.id},
+			eval_operation = #{evalOperation},
+			eval_date = #{evalDate},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE staff_eval SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+</mapper>
