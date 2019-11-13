@@ -17,15 +17,25 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.bytedeco.javacv.FrameRecorder;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
-import org.bytedeco.javacv.OpenCVFrameGrabber;
+import org.bytedeco.opencv.global.opencv_imgproc;
 import org.bytedeco.opencv.global.opencv_objdetect;
 import org.bytedeco.opencv.opencv_core.IplImage;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.Scalar;
 import org.junit.Test;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
@@ -37,22 +47,26 @@ import java.io.IOException;
  */
 
 public class JavavcCameraTest {
-    public static void main(String[] args) throws Exception, InterruptedException {
-        OpenCVFrameGrabber grabber = new OpenCVFrameGrabber(0);
-        grabber.start();   //开始获取摄像头数据
-        CanvasFrame canvas = new CanvasFrame("摄像头");//新建一个窗口
-        canvas.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        canvas.setAlwaysOnTop(true);
+    public static void main(String[] args) throws Exception, InterruptedException, FrameRecorder.Exception {
+//        OpenCVFrameGrabber grabber = new OpenCVFrameGrabber(0);
+//        grabber.start();   //开始获取摄像头数据
+//        CanvasFrame canvas = new CanvasFrame("摄像头");//新建一个窗口
+//        canvas.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        canvas.setAlwaysOnTop(true);
+//
+//        while (true) {
+//            if (!canvas.isDisplayable()) {//窗口是否关闭
+//                grabber.stop();//停止抓取
+//                System.exit(2);//退出
+//            }
+//            canvas.showImage(grabber.grab());//获取摄像头图像并放到窗口上显示， 这里的Frame frame=grabber.grab(); frame是一帧视频图像
+//
+//            Thread.sleep(50);//50毫秒刷新一次图像
+//        }
 
-        while (true) {
-            if (!canvas.isDisplayable()) {//窗口是否关闭
-                grabber.stop();//停止抓取
-                System.exit(2);//退出
-            }
-            canvas.showImage(grabber.grab());//获取摄像头图像并放到窗口上显示， 这里的Frame frame=grabber.grab(); frame是一帧视频图像
-
-            Thread.sleep(50);//50毫秒刷新一次图像
-        }
+        String a = "rtmp://www.fourhu.xyz:1935/live/livestream";
+        String b = "rtmp://www.fourhu.xyz/violation-rule?vhost=violation-rule-record/classroom01-camera01";
+        recordPush(a,b,25);
     }
 
     @Test
@@ -190,6 +204,72 @@ public class JavavcCameraTest {
         String outputFile = "recorde.mp4";
         frameRecord(inputFile, outputFile,1);
     }
+    
+    @Test
+    public void test004() throws Exception, FrameRecorder.Exception, InterruptedException {
+        String a = "rtmp://www.fourhu.xyz:1935/live/livestream";
+        String b = "rtmp://www.fourhu.xyz/violation-rule?vhost=violation-rule-record/classroom01-camera01";
+        recordPush(a,b,25);
+    }
+
+
+
+    /**
+     * 给图片增加文字水印
+     *
+     * @param imgPath
+     *            -要添加水印的图片路径
+     * @param outImgPath
+     *            -输出路径
+     * @param text-文字
+     * @param font
+     *            -字体
+     * @param color
+     *            -颜色
+     * @param x
+     *            -文字位于当前图片的横坐标
+     * @param y
+     *            -文字位于当前图片的竖坐标
+     */
+    public void mark(String imgPath, String outImgPath, String text, Font font, Color color, int x, int y) {
+        try {
+            // 读取原图片信息
+            File imgFile = null;
+            Image img = null;
+            if (imgPath != null) {
+                imgFile = new File(imgPath);
+            }
+            if (imgFile != null && imgFile.exists() && imgFile.isFile() && imgFile.canRead()) {
+                img = ImageIO.read(imgFile);
+            }
+            int imgWidth = img.getWidth(null);
+            int imgHeight = img.getHeight(null);
+            // 加水印
+            BufferedImage bufImg = new BufferedImage(imgWidth, imgHeight, BufferedImage.TYPE_INT_RGB);
+            mark(bufImg, img, text, font, color, x, y);
+            // 输出图片
+            FileOutputStream outImgStream = new FileOutputStream(outImgPath);
+            ImageIO.write(bufImg, "jpg", outImgStream);
+            outImgStream.flush();
+            outImgStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 加文字水印
+    public void mark(BufferedImage bufImg, Image img, String text, Font font, Color color, int x, int y) {
+        Graphics2D g = bufImg.createGraphics();
+        g.drawImage(img, 0, 0, bufImg.getWidth(), bufImg.getHeight(), null);
+        g.setColor(color);
+        g.setFont(font);
+        g.drawString(text, x, y);
+        g.dispose();
+    }
 
 
     /**
@@ -224,7 +304,16 @@ public class JavavcCameraTest {
         }else{
             System.out.println("没有取到第一帧");
         }
-        //如果想要保存图片,可以使用 opencv_imgcodecs.cvSaveImage("hello.jpg", grabbedImage);来保存图片
+//        int i = 1;
+//        while ((grabframe=grabber.grab()) != null) {
+//            grabbedImage = converter.convert(grabframe);
+//            i ++;
+//            if (grabbedImage!=null && grabbedImage.imageSize() != 0){
+//                opencv_imgcodecs.cvSaveImage("hello"+i +".jpg", grabbedImage);//来保存图片
+//            }
+//        }
+
+        ///如果想要保存图片,可以使用 opencv_imgcodecs.cvSaveImage("hello.jpg", grabbedImage);来保存图片
         FrameRecorder recorder;
         try {
             recorder = FrameRecorder.createDefault(outputFile, 1280, 720);
@@ -257,12 +346,31 @@ public class JavavcCameraTest {
         CanvasFrame frame = new CanvasFrame("camera", CanvasFrame.getDefaultGamma() / grabber.getGamma());
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setAlwaysOnTop(true);
+        Point point1 = new Point(10, 10);
+        Point point2 = new Point(200, 200);
+        Point point3 = new Point(232, 230);
+        // 颜色
+        Scalar scalar1 = new Scalar(0, 0, 255,0);
+        Scalar scalar2 = new Scalar(255, 0, 0, 0);
+        Mat mat = null;
+
         while (frame.isVisible() && (grabframe=grabber.grab()) != null) {
             System.out.println("推流...");
-            frame.showImage(grabframe);
-            grabbedImage = converter.convert(grabframe);
-            Frame rotatedFrame = converter.convert(grabbedImage);
+            Java2DFrameConverter javaconverter=new Java2DFrameConverter();
+            BufferedImage buffImg=javaconverter.convert(grabframe);
+            mat = converter.convertToMat(grabframe);
+            // 加文字水印，opencv_imgproc.putText（图片，水印文字，文字位置，字体，字体大小，字体颜色，字体粗度，文字反锯齿，是否翻转文字）
 
+            if (mat !=null){
+                opencv_imgproc.putText(mat, "classroom01-camera01",point1,1,1.2,scalar1);
+                frame.showImage(converter.convert(mat));
+                grabbedImage = converter.convert(converter.convert(mat));
+            }else {
+                frame.showImage(grabframe);
+                grabbedImage = converter.convert(grabframe);
+            }
+
+            Frame rotatedFrame = converter.convert(grabbedImage);
             if (startTime == 0) {
                 startTime = System.currentTimeMillis();
             }
@@ -270,13 +378,20 @@ public class JavavcCameraTest {
             if(rotatedFrame!=null){
                 recorder.record(rotatedFrame);
             }
-
             Thread.sleep(40);
         }
         frame.dispose();
         recorder.stop();
         recorder.release();
         grabber.stop();
+        // 手动释放资源
+        scalar1.close();
+        scalar2.close();
+        point1.close();
+        point2.close();
+        mat.release();
+        mat.close();
+        point3.close();
         System.exit(2);
     }
 }
