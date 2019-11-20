@@ -93,6 +93,11 @@
 			<artifactId>javacv-platform</artifactId>
 			<version>1.5.1</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-websocket</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
 		<!-- SPRING begin -->
 		<dependency>
 			<groupId>org.springframework</groupId>
