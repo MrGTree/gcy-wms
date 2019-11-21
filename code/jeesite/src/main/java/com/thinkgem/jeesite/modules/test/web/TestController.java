@@ -3,9 +3,14 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.thinkgem.jeesite.common.persistence.Page;
+import com.thinkgem.jeesite.common.utils.StringUtils;
+import com.thinkgem.jeesite.common.web.BaseController;
+import com.thinkgem.jeesite.modules.sys.entity.User;
+import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
+import com.thinkgem.jeesite.modules.test.entity.Test;
+import com.thinkgem.jeesite.modules.test.service.TestService;
+import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -15,14 +20,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.socket.TextMessage;
 
-import com.thinkgem.jeesite.common.persistence.Page;
-import com.thinkgem.jeesite.common.web.BaseController;
-import com.thinkgem.jeesite.common.utils.StringUtils;
-import com.thinkgem.jeesite.modules.sys.entity.User;
-import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
-import com.thinkgem.jeesite.modules.test.entity.Test;
-import com.thinkgem.jeesite.modules.test.service.TestService;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * 测试Controller
@@ -35,7 +36,11 @@ public class TestController extends BaseController {
 
 	@Autowired
 	private TestService testService;
-	
+
+	@Autowired
+	private WsHandler wsHandler;
+
+
 	@ModelAttribute
 	public Test get(@RequestParam(required=false) String id) {
 		if (StringUtils.isNotBlank(id)){
@@ -44,6 +49,13 @@ public class TestController extends BaseController {
 			return new Test();
 		}
 	}
+
+	@RequestMapping(value ="websocket")
+	public void websocket() {
+		wsHandler.sendMessageToUsers(new TextMessage("fuck a a a a"));
+		return ;
+	}
+
 	
 	/**
 	 * 显示列表页
