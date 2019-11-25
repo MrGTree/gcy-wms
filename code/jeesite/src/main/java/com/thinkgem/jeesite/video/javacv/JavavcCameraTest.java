@@ -65,7 +65,7 @@ public class JavavcCameraTest {
 //        }
 
         String a = "rtmp://www.fourhu.xyz:1935/live/livestream";
-        String b = "rtmp://www.fourhu.xyz/violation-rule?vhost=violation-rule-record/classroom01-camera01";
+        String b = "rtmp://www.fourhu.xyz/violation-rule?vhost=violation-rule-record/classroom01-camera01";///mnt/software/srs-2.0-r6/trunk/objs/nginx/html/violation-rule
         recordPush(a,b,25);
     }
 

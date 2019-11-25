@@ -24,6 +24,7 @@ import org.springframework.web.socket.TextMessage;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 /**
  * 测试Controller
@@ -40,6 +41,17 @@ public class TestController extends BaseController {
 	@Autowired
 	private WsHandler wsHandler;
 
+	/**
+	 * 新建或修改表单
+	 * @param test
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping(value = "addForm")
+	public String addForm(Test test, Model model) {
+		return "modules/test/testAddForm";
+	}
+
 
 	@ModelAttribute
 	public Test get(@RequestParam(required=false) String id) {
@@ -51,10 +63,26 @@ public class TestController extends BaseController {
 	}
 
 	@RequestMapping(value ="websocket")
-	public void websocket() {
+	@ResponseBody
+	public String websocket() {
 		wsHandler.sendMessageToUsers(new TextMessage("fuck a a a a"));
-		return ;
+		return "ok";
 	}
+
+	/**
+	 * 显示列表页
+	 * @return
+	 */
+	@RequestMapping(value = {"startMonitor"})
+	public String startMonitor(List<String> monitors) {
+
+		int size = monitors.size();
+
+
+
+		return "modules/test/testList";
+	}
+
 
 	
 	/**
