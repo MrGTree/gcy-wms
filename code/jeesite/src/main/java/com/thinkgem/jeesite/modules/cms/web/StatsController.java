@@ -25,7 +25,7 @@ import java.util.Map;
 @RequestMapping(value = "${adminPath}/cms/stats")
 public class StatsController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private StatsService statsService;
 	
 	/**

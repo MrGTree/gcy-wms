@@ -24,7 +24,7 @@ import com.thinkgem.jeesite.modules.staff.dao.StaffWorkExpDao;
 @Transactional(readOnly = true)
 public class StaffWorkExpService extends CrudService<StaffWorkExpDao, StaffWorkExp> {
 
-	@Autowired
+	//@Autowired
 	private StaffWorkExpDao staffWorkExpDao;
 
 	

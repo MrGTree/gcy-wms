@@ -32,13 +32,13 @@ import com.thinkgem.jeesite.modules.gen.util.GenUtils;
 @Transactional(readOnly = true)
 public class GenSchemeService extends BaseService {
 
-	@Autowired
+	//@Autowired
 	private GenSchemeDao genSchemeDao;
-//	@Autowired
+//	//@Autowired
 //	private GenTemplateDao genTemplateDao;
-	@Autowired
+	//@Autowired
 	private GenTableDao genTableDao;
-	@Autowired
+	//@Autowired
 	private GenTableColumnDao genTableColumnDao;
 	
 	public GenScheme get(String id) {

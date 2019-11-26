@@ -3,16 +3,6 @@
  */
 package com.thinkgem.jeesite.modules.cms.service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import org.apache.commons.lang3.StringEscapeUtils;
-import org.apache.commons.lang3.time.DateUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.google.common.collect.Lists;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.persistence.Page;
@@ -26,6 +16,14 @@ import com.thinkgem.jeesite.modules.cms.entity.Article;
 import com.thinkgem.jeesite.modules.cms.entity.ArticleData;
 import com.thinkgem.jeesite.modules.cms.entity.Category;
 import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.time.DateUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * 文章Service
@@ -36,9 +34,9 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @Transactional(readOnly = true)
 public class ArticleService extends CrudService<ArticleDao, Article> {
 
-	@Autowired
+	//@Autowired
 	private ArticleDataDao articleDataDao;
-	@Autowired
+	//@Autowired
 	private CategoryDao categoryDao;
 	
 	@Transactional(readOnly = false)

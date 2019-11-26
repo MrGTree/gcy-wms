@@ -9,12 +9,22 @@ public class CloseMan implements Serializable {
 
     private Man man;
 
+    private boolean currentInc;
+
     public CloseMan(int time, Man man) {
         this.time = time;
         this.man = man;
     }
 
     public CloseMan() {
+    }
+
+    public boolean isCurrentInc() {
+        return currentInc;
+    }
+
+    public void setCurrentInc(boolean currentInc) {
+        this.currentInc = currentInc;
     }
 
     public int getTime() {
@@ -33,6 +43,12 @@ public class CloseMan implements Serializable {
         this.man = man;
     }
 
+    public CloseMan(int time, Man man, boolean currentInc) {
+        this.time = time;
+        this.man = man;
+        this.currentInc = currentInc;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -43,6 +59,6 @@ public class CloseMan implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(time, man);
+        return Objects.hash(time, man, currentInc);
     }
 }

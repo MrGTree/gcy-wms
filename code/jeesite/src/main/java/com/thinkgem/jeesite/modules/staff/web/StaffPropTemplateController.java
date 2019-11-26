@@ -38,16 +38,16 @@ import java.util.*;
 @RequestMapping(value = "${adminPath}/staff/staffPropTemplate")
 public class StaffPropTemplateController extends BaseController {
 
-    @Autowired
+    //@Autowired
     private StaffRolePropService staffRolePropService;
 
-    @Autowired
+    //@Autowired
     private SystemService systemService;
 
-    @Autowired
+    //@Autowired
     private StaffTemplateService staffTemplateService;
 
-    @Autowired
+    //@Autowired
     private StaffPropTemplateService staffPropTemplateService;
 
     /*@ModelAttribute

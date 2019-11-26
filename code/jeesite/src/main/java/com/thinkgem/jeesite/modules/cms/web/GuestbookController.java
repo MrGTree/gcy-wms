@@ -34,7 +34,7 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @RequestMapping(value = "${adminPath}/cms/guestbook")
 public class GuestbookController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private GuestbookService guestbookService;
 	
 	@ModelAttribute

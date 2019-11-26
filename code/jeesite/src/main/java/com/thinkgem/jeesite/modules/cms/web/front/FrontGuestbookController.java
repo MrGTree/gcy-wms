@@ -33,7 +33,7 @@ import com.thinkgem.jeesite.modules.cms.utils.CmsUtils;
 @RequestMapping(value = "${frontPath}/guestbook")
 public class FrontGuestbookController extends BaseController{
 	
-	@Autowired
+	//@Autowired
 	private GuestbookService guestbookService;
 
 	/**

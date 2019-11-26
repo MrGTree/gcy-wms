@@ -34,13 +34,13 @@ import javax.servlet.http.HttpServletResponse;
 @RequestMapping(value = "${adminPath}/staff/staffPropAnswer")
 public class StaffPropAnswerController extends BaseController {
 
-    @Autowired
+    //@Autowired
     private StaffPropAnswerService staffPropAnswerService;
 
-    @Autowired
+    //@Autowired
     private SystemService systemService;
 
-    @Autowired
+    //@Autowired
     private StaffTemplateService staffTemplateService;
 
     @ModelAttribute

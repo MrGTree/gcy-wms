@@ -14,7 +14,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class StaffPropTemplateService extends CrudService<StaffPropTemplateDao, StaffPropTemplate> {
 
-	@Autowired
+	//@Autowired
 	private  StaffPropTemplateDao staffPropTemplateDao ;
 
 

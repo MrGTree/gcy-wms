@@ -31,7 +31,7 @@ import com.thinkgem.jeesite.modules.oa.service.OaNotifyService;
 @RequestMapping(value = "${adminPath}/oa/oaNotify")
 public class OaNotifyController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private OaNotifyService oaNotifyService;
 	
 	@ModelAttribute

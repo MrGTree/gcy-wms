@@ -35,7 +35,7 @@ import ${packageName}.${moduleName}.dao<#if subModuleName != "">.${subModuleName
 public class ${ClassName}Service extends CrudService<${ClassName}Dao, ${ClassName}> {
 
 	<#list table.childList as c>
-	@Autowired
+	//@Autowired
 	private ${c.className?cap_first}Dao ${c.className?uncap_first}Dao;
 	</#list>
 	

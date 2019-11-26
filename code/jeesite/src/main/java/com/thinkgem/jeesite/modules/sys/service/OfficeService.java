@@ -26,7 +26,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class OfficeService extends TreeService<OfficeDao, Office> {
 
-	@Autowired
+	//@Autowired
 	private OfficeDao officeDao;
 
 	public List<Office> findAll(){

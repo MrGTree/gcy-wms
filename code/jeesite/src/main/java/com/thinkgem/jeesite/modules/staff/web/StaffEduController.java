@@ -33,10 +33,10 @@ import java.util.List;
 @RequestMapping(value = "${adminPath}/staff/staffEdu")
 public class StaffEduController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private StaffEduService staffEduService;
 
-	@Autowired
+	//@Autowired
 	private SystemService systemService;
 	
 	@ModelAttribute

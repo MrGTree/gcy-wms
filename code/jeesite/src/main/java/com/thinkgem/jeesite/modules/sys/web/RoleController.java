@@ -41,10 +41,10 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @RequestMapping(value = "${adminPath}/sys/role")
 public class RoleController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private SystemService systemService;
 	
-	@Autowired
+	//@Autowired
 	private OfficeService officeService;
 	
 	@ModelAttribute("role")

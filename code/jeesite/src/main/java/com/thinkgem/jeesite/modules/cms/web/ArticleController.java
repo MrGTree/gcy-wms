@@ -37,15 +37,15 @@ import java.util.List;
 @RequestMapping(value = "${adminPath}/cms/article")
 public class ArticleController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private ArticleService articleService;
-	@Autowired
+	//@Autowired
 	private ArticleDataService articleDataService;
-	@Autowired
+	//@Autowired
 	private CategoryService categoryService;
-    @Autowired
+    //@Autowired
    	private FileTplService fileTplService;
-    @Autowired
+    //@Autowired
    	private SiteService siteService;
 	
 	@ModelAttribute

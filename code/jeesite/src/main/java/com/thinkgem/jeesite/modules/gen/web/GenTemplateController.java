@@ -32,7 +32,7 @@ import com.thinkgem.jeesite.modules.gen.service.GenTemplateService;
 @RequestMapping(value = "${adminPath}/gen/genTemplate")
 public class GenTemplateController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private GenTemplateService genTemplateService;
 	
 	@ModelAttribute

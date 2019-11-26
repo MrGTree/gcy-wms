@@ -41,7 +41,7 @@ import java.util.Map;
 @RequestMapping(value = "${adminPath}/sys/user")
 public class UserController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private SystemService systemService;
 	
 	@ModelAttribute
@@ -389,7 +389,7 @@ public class UserController extends BaseController {
 //	@InitBinder
 //	public void initBinder(WebDataBinder b) {
 //		b.registerCustomEditor(List.class, "roleList", new PropertyEditorSupport(){
-//			@Autowired
+//			//@Autowired
 //			private SystemService systemService;
 //			@Override
 //			public void setAsText(String text) throws IllegalArgumentException {

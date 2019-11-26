@@ -37,7 +37,7 @@ import ${packageName}.${moduleName}.service<#if subModuleName != "">.${subModule
 @RequestMapping(value = "${r"${adminPath}"}/${urlPrefix}")
 public class ${ClassName}Controller extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private ${ClassName}Service ${className}Service;
 	
 	@ModelAttribute

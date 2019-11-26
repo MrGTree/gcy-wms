@@ -3,18 +3,15 @@
  */
 package com.thinkgem.jeesite.modules.sys.interceptor;
 
-import java.text.SimpleDateFormat;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.thinkgem.jeesite.common.service.BaseService;
+import com.thinkgem.jeesite.common.utils.DateUtils;
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import com.thinkgem.jeesite.common.service.BaseService;
-import com.thinkgem.jeesite.common.utils.DateUtils;
-import com.thinkgem.jeesite.modules.sys.utils.LogUtils;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.text.SimpleDateFormat;
 
 /**
  * 日志拦截器
@@ -51,7 +48,7 @@ public class LogInterceptor extends BaseService implements HandlerInterceptor {
 			Object handler, Exception ex) throws Exception {
 
 		// 保存日志
-		LogUtils.saveLog(request, handler, ex, null);
+//		LogUtils.saveLog(request, handler, ex, null);
 		
 		// 打印JVM信息。
 		if (logger.isDebugEnabled()){

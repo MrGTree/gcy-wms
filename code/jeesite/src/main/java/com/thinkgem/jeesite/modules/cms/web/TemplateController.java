@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping(value = "${adminPath}/cms/template")
 public class TemplateController extends BaseController {
 
-    @Autowired
+    //@Autowired
    	private FileTplService fileTplService;
-    @Autowired
+    //@Autowired
    	private SiteService siteService;
 
     @RequiresPermissions("cms:template:edit")

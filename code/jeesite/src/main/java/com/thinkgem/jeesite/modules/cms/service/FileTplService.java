@@ -19,7 +19,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class FileTplService {
 
-    @Autowired
+    //@Autowired
     ServletContext context;
 
     public List<String> getNameListByPrefix(String path) {

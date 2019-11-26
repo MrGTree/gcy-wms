@@ -7,10 +7,10 @@
 
 	<description>Shiro Configuration</description>
 
-    <!-- 加载配置属性文件 -->
+<!--    &lt;!&ndash; 加载配置属性文件 &ndash;&gt;
 	<context:property-placeholder ignore-unresolvable="true" location="classpath:jeesite.properties" />
 	
-	<!-- Shiro权限过滤过滤器定义 -->
+	&lt;!&ndash; Shiro权限过滤过滤器定义 &ndash;&gt;
 	<bean name="shiroFilterChainDefinitions" class="java.lang.String">
 		<constructor-arg>
 			<value>
@@ -26,10 +26,10 @@
 		</constructor-arg>
 	</bean>
 	
-	<!-- 安全认证过滤器 -->
+	&lt;!&ndash; 安全认证过滤器 &ndash;&gt;
 	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
-		<property name="securityManager" ref="securityManager" /><!-- 
-		<property name="loginUrl" value="${cas.server.url}?service=${cas.project.url}${adminPath}/cas" /> -->
+		<property name="securityManager" ref="securityManager" />&lt;!&ndash;
+		<property name="loginUrl" value="${cas.server.url}?service=${cas.project.url}${adminPath}/cas" /> &ndash;&gt;
 		<property name="loginUrl" value="${adminPath}/login" />
 		<property name="successUrl" value="${adminPath}?login" />
 		<property name="filters">
@@ -43,66 +43,66 @@
 		</property>
 	</bean>
 	
-	<!-- CAS认证过滤器 -->  
+	&lt;!&ndash; CAS认证过滤器 &ndash;&gt;
 	<bean id="casFilter" class="org.apache.shiro.cas.CasFilter">  
 		<property name="failureUrl" value="${adminPath}/login"/>
 	</bean>
 	
-	<!-- 定义Shiro安全管理配置 -->
+	&lt;!&ndash; 定义Shiro安全管理配置 &ndash;&gt;
 	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
 		<property name="realm" ref="systemAuthorizingRealm" />
 		<property name="sessionManager" ref="sessionManager" />
 		<property name="cacheManager" ref="shiroCacheManager" />
 	</bean>
 	
-	<!-- 自定义会话管理配置 -->
+	&lt;!&ndash; 自定义会话管理配置 &ndash;&gt;
 	<bean id="sessionManager" class="com.thinkgem.jeesite.common.security.shiro.session.SessionManager"> 
 		<property name="sessionDAO" ref="sessionDAO"/>
 		
-		<!-- 会话超时时间，单位：毫秒  -->
+		&lt;!&ndash; 会话超时时间，单位：毫秒  &ndash;&gt;
 		<property name="globalSessionTimeout" value="${session.sessionTimeout}"/>
 		
-		<!-- 定时清理失效会话, 清理用户直接关闭浏览器造成的孤立会话   -->
+		&lt;!&ndash; 定时清理失效会话, 清理用户直接关闭浏览器造成的孤立会话   &ndash;&gt;
 		<property name="sessionValidationInterval" value="${session.sessionTimeoutClean}"/>
-<!--  		<property name="sessionValidationSchedulerEnabled" value="false"/> -->
+&lt;!&ndash;  		<property name="sessionValidationSchedulerEnabled" value="false"/> &ndash;&gt;
  		<property name="sessionValidationSchedulerEnabled" value="true"/>
  		
 		<property name="sessionIdCookie" ref="sessionIdCookie"/>
 		<property name="sessionIdCookieEnabled" value="true"/>
 	</bean>
 	
-	<!-- 指定本系统SESSIONID, 默认为: JSESSIONID 问题: 与SERVLET容器名冲突, 如JETTY, TOMCAT 等默认JSESSIONID,
-		当跳出SHIRO SERVLET时如ERROR-PAGE容器会为JSESSIONID重新分配值导致登录会话丢失! -->
+	&lt;!&ndash; 指定本系统SESSIONID, 默认为: JSESSIONID 问题: 与SERVLET容器名冲突, 如JETTY, TOMCAT 等默认JSESSIONID,
+		当跳出SHIRO SERVLET时如ERROR-PAGE容器会为JSESSIONID重新分配值导致登录会话丢失! &ndash;&gt;
 	<bean id="sessionIdCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
 	    <constructor-arg name="name" value="jeesite.session.id"/>
 	</bean>
 
-	<!-- 自定义Session存储容器 -->
-<!-- 	<bean id="sessionDAO" class="com.thinkgem.jeesite.common.security.shiro.session.JedisSessionDAO"> -->
-<!-- 		<property name="sessionIdGenerator" ref="idGen" /> -->
-<!-- 		<property name="sessionKeyPrefix" value="${redis.keyPrefix}_session_" /> -->
-<!-- 	</bean> -->
+	&lt;!&ndash; 自定义Session存储容器 &ndash;&gt;
+&lt;!&ndash; 	<bean id="sessionDAO" class="com.thinkgem.jeesite.common.security.shiro.session.JedisSessionDAO"> &ndash;&gt;
+&lt;!&ndash; 		<property name="sessionIdGenerator" ref="idGen" /> &ndash;&gt;
+&lt;!&ndash; 		<property name="sessionKeyPrefix" value="${redis.keyPrefix}_session_" /> &ndash;&gt;
+&lt;!&ndash; 	</bean> &ndash;&gt;
 	<bean id="sessionDAO" class="com.thinkgem.jeesite.common.security.shiro.session.CacheSessionDAO">
 		<property name="sessionIdGenerator" ref="idGen" />
 		<property name="activeSessionsCacheName" value="activeSessionsCache" />
 		<property name="cacheManager" ref="shiroCacheManager" />
 	</bean>
 	
-	<!-- 定义授权缓存管理器 -->
-<!-- 	<bean id="shiroCacheManager" class="com.thinkgem.jeesite.common.security.shiro.cache.SessionCacheManager" /> -->
+	&lt;!&ndash; 定义授权缓存管理器 &ndash;&gt;
+&lt;!&ndash; 	<bean id="shiroCacheManager" class="com.thinkgem.jeesite.common.security.shiro.cache.SessionCacheManager" /> &ndash;&gt;
 	<bean id="shiroCacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
 		<property name="cacheManager" ref="cacheManager"/>
 	</bean>
 	
-	<!-- 保证实现了Shiro内部lifecycle函数的bean执行 -->
+	&lt;!&ndash; 保证实现了Shiro内部lifecycle函数的bean执行 &ndash;&gt;
 	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
 	
-	<!-- AOP式方法级权限检查  -->
+	&lt;!&ndash; AOP式方法级权限检查  &ndash;&gt;
 	<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" depends-on="lifecycleBeanPostProcessor">
 		<property name="proxyTargetClass" value="true" />
 	</bean>
 	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
     	<property name="securityManager" ref="securityManager"/>
-	</bean>
+	</bean>-->
 	
 </beans>

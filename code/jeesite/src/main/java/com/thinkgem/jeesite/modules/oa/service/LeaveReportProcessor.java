@@ -23,9 +23,9 @@ public class LeaveReportProcessor implements TaskListener {
 
 	private static final long serialVersionUID = 1L;
 
-	@Autowired
+	//@Autowired
 	private LeaveDao leaveDao;
-	@Autowired
+	//@Autowired
 	private RuntimeService runtimeService;
 	
 	/**

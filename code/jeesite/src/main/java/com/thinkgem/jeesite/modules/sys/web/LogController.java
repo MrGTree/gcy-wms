@@ -26,7 +26,7 @@ import com.thinkgem.jeesite.modules.sys.service.LogService;
 @RequestMapping(value = "${adminPath}/sys/log")
 public class LogController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private LogService logService;
 	
 	@RequiresPermissions("sys:log:view")

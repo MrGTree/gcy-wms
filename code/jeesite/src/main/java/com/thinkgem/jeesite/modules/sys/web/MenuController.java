@@ -36,7 +36,7 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @RequestMapping(value = "${adminPath}/sys/menu")
 public class MenuController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private SystemService systemService;
 	
 	@ModelAttribute("menu")

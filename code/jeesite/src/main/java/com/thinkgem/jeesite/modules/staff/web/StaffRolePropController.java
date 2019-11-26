@@ -42,13 +42,13 @@ import java.util.Map;
 @RequestMapping(value = "${adminPath}/staff/staffRoleProp")
 public class StaffRolePropController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private StaffRolePropService staffRolePropService;
 
-	@Autowired
+	//@Autowired
 	private SystemService systemService;
 
-	@Autowired
+	//@Autowired
 	private StaffTemplateService staffTemplateService;
 	
 	@ModelAttribute

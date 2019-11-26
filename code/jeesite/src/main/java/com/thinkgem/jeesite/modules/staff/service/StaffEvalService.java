@@ -23,10 +23,10 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class StaffEvalService extends CrudService<StaffEvalDao, StaffEval> {
 
-	@Autowired
+	//@Autowired
 	private StaffEvalDao staffEvalDao;
 
-	@Autowired
+	//@Autowired
 	private UserDao userDao;
 
 	public StaffEval get(String id) {

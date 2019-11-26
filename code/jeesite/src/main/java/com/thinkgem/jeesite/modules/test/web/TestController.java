@@ -3,6 +3,8 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkgem.jeesite.common.persistence.Page;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.common.web.BaseController;
@@ -10,6 +12,7 @@ import com.thinkgem.jeesite.modules.sys.entity.User;
 import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 import com.thinkgem.jeesite.modules.test.entity.Test;
 import com.thinkgem.jeesite.modules.test.service.TestService;
+import com.thinkgem.jeesite.video.javacv.UrlMapper;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,7 @@ import org.springframework.web.socket.TextMessage;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,7 +39,7 @@ import java.util.List;
 @RequestMapping(value = "${adminPath}/test/test")
 public class TestController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private TestService testService;
 
 	@Autowired
@@ -64,9 +68,15 @@ public class TestController extends BaseController {
 
 	@RequestMapping(value ="websocket")
 	@ResponseBody
-	public String websocket() {
-		wsHandler.sendMessageToUsers(new TextMessage("fuck a a a a"));
-		return "ok";
+	public String websocket() throws JsonProcessingException {
+		UrlMapper urlMapper = new UrlMapper("rtmp://www.fourhu.xyz:1935/live/livestream","rtmp://www.fourhu.xyz/violation-rule?vhost=violation-rule-record/classroom01-camera01","1");
+		ArrayList<UrlMapper> urlMappers = new ArrayList<>();
+		urlMappers.add(urlMapper);
+
+		ObjectMapper objectMapper = new ObjectMapper();
+		String s = objectMapper.writeValueAsString(urlMappers);
+		wsHandler.sendMessageToUsers(new TextMessage(s));
+		return s;
 	}
 
 	/**

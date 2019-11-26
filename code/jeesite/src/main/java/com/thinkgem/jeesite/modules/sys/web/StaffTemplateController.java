@@ -31,7 +31,7 @@ import com.thinkgem.jeesite.modules.sys.service.StaffTemplateService;
 @RequestMapping(value = "${adminPath}/sys/staffTemplate")
 public class StaffTemplateController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private StaffTemplateService staffTemplateService;
 	
 	@ModelAttribute

@@ -41,11 +41,11 @@ import com.thinkgem.jeesite.modules.cms.utils.TplUtils;
 @RequestMapping(value = "${adminPath}/cms/category")
 public class CategoryController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private CategoryService categoryService;
-    @Autowired
+    //@Autowired
    	private FileTplService fileTplService;
-    @Autowired
+    //@Autowired
    	private SiteService siteService;
 	
 	@ModelAttribute("category")

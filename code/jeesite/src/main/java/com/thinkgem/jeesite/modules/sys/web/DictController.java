@@ -37,7 +37,7 @@ import com.thinkgem.jeesite.modules.sys.service.DictService;
 @RequestMapping(value = "${adminPath}/sys/dict")
 public class DictController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private DictService dictService;
 	
 	@ModelAttribute

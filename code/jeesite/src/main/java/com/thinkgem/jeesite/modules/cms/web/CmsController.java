@@ -21,7 +21,7 @@ import com.thinkgem.jeesite.modules.cms.service.CategoryService;
 @RequestMapping(value = "${adminPath}/cms")
 public class CmsController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private CategoryService categoryService;
 	
 	@RequiresPermissions("cms:view")

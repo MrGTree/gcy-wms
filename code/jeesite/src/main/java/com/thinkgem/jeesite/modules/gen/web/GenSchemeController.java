@@ -34,10 +34,10 @@ import com.thinkgem.jeesite.modules.gen.util.GenUtils;
 @RequestMapping(value = "${adminPath}/gen/genScheme")
 public class GenSchemeController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private GenSchemeService genSchemeService;
 	
-	@Autowired
+	//@Autowired
 	private GenTableService genTableService;
 	
 	@ModelAttribute

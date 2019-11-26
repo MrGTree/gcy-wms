@@ -31,17 +31,17 @@ import java.util.List;
 @RequestMapping(value = "${frontPath}")
 public class FrontController extends BaseController{
 	
-	@Autowired
+	//@Autowired
 	private ArticleService articleService;
-	@Autowired
+	//@Autowired
 	private ArticleDataService articleDataService;
-	@Autowired
+	//@Autowired
 	private LinkService linkService;
-	@Autowired
+	//@Autowired
 	private CommentService commentService;
-	@Autowired
+	//@Autowired
 	private CategoryService categoryService;
-	@Autowired
+	//@Autowired
 	private SiteService siteService;
 	
 	/**

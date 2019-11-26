@@ -34,7 +34,7 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @RequestMapping(value = "${adminPath}/cms/comment")
 public class CommentController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private CommentService commentService;
 	
 	@ModelAttribute

@@ -23,7 +23,7 @@ import com.thinkgem.jeesite.modules.gen.dao.GenTemplateDao;
 @Transactional(readOnly = true)
 public class GenTemplateService extends BaseService {
 
-	@Autowired
+	//@Autowired
 	private GenTemplateDao genTemplateDao;
 	
 	public GenTemplate get(String id) {

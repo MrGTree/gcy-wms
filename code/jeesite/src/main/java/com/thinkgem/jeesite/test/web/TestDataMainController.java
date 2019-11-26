@@ -31,7 +31,7 @@ import com.thinkgem.jeesite.test.service.TestDataMainService;
 @RequestMapping(value = "${adminPath}/test/testDataMain")
 public class TestDataMainController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private TestDataMainService testDataMainService;
 	
 	@ModelAttribute

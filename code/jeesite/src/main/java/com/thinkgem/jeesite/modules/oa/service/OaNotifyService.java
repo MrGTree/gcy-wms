@@ -25,7 +25,7 @@ import com.thinkgem.jeesite.modules.oa.dao.OaNotifyRecordDao;
 @Transactional(readOnly = true)
 public class OaNotifyService extends CrudService<OaNotifyDao, OaNotify> {
 
-	@Autowired
+	//@Autowired
 	private OaNotifyRecordDao oaNotifyRecordDao;
 
 	public OaNotify get(String id) {

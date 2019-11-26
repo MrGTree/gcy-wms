@@ -33,9 +33,9 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @RequestMapping(value = "${frontPath}/search")
 public class FrontSearchController extends BaseController{
 	
-	@Autowired
+	//@Autowired
 	private ArticleService articleService;
-	@Autowired
+	//@Autowired
 	private GuestbookService guestbookService;
 	
 	/**

@@ -22,7 +22,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class StaffEduService extends CrudService<StaffEduDao, StaffEdu> {
 
-	@Autowired
+	//@Autowired
 	private StaffEduDao staffEduDao;
 
 	public StaffEdu get(String id) {

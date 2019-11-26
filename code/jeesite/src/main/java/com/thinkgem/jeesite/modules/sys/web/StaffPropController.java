@@ -30,7 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 @RequestMapping(value = "${adminPath}/sys/staffProp")
 public class StaffPropController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private StaffPropService staffPropService;
 	
 	@ModelAttribute

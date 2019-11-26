@@ -37,9 +37,9 @@ import com.thinkgem.jeesite.modules.cms.service.LinkService;
 @RequestMapping(value = "${adminPath}/cms/link")
 public class LinkController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private LinkService linkService;
-	@Autowired
+	//@Autowired
 	private CategoryService categoryService;
 	
 	@ModelAttribute

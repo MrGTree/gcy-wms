@@ -33,7 +33,7 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @RequestMapping(value = "${adminPath}/cms/site")
 public class SiteController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private SiteService siteService;
 	
 	@ModelAttribute

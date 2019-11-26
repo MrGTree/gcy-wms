@@ -36,7 +36,7 @@ import com.thinkgem.jeesite.test.service.TestTreeService;
 @RequestMapping(value = "${adminPath}/test/testTree")
 public class TestTreeController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private TestTreeService testTreeService;
 	
 	@ModelAttribute

@@ -28,11 +28,11 @@ import com.thinkgem.jeesite.modules.gen.dao.GenTableDao;
 @Transactional(readOnly = true)
 public class GenTableService extends BaseService {
 
-	@Autowired
+	//@Autowired
 	private GenTableDao genTableDao;
-	@Autowired
+	//@Autowired
 	private GenTableColumnDao genTableColumnDao;
-	@Autowired
+	//@Autowired
 	private GenDataBaseDictDao genDataBaseDictDao;
 	
 	public GenTable get(String id) {

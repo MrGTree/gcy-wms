@@ -48,16 +48,16 @@ import static com.thinkgem.jeesite.common.service.BaseService.dataScopeFilter;
 @RequestMapping(value = "${adminPath}/staff/staffArchives")
 public class StaffArchivesContrllor extends BaseController {
 
-    @Autowired
+    //@Autowired
     private SystemService systemService;
 
-    @Autowired
+    //@Autowired
     private StaffPropAnswerService staffPropAnswerService;
 
-    @Autowired
+    //@Autowired
     private StaffTemplateService staffTemplateService;
 
-    @Autowired
+    //@Autowired
     private UserDao userDao;
 
     @RequiresPermissions("staff:archives:view")

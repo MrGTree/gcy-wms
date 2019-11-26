@@ -3,21 +3,6 @@
  */
 package com.thinkgem.jeesite.modules.sys.web;
 
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.shiro.authz.UnauthorizedException;
-import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.apache.shiro.web.util.WebUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-
 import com.google.common.collect.Maps;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.security.shiro.session.SessionDAO;
@@ -30,6 +15,18 @@ import com.thinkgem.jeesite.common.web.BaseController;
 import com.thinkgem.jeesite.modules.sys.security.FormAuthenticationFilter;
 import com.thinkgem.jeesite.modules.sys.security.SystemAuthorizingRealm.Principal;
 import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
+import org.apache.shiro.authz.UnauthorizedException;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.web.util.WebUtils;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
 /**
  * 登录Controller
@@ -39,7 +36,7 @@ import com.thinkgem.jeesite.modules.sys.utils.UserUtils;
 @Controller
 public class LoginController extends BaseController{
 	
-	@Autowired
+	//@Autowired
 	private SessionDAO sessionDAO;
 	
 	/**
@@ -132,10 +129,10 @@ public class LoginController extends BaseController{
 	@RequiresPermissions("user")
 	@RequestMapping(value = "${adminPath}")
 	public String index(HttpServletRequest request, HttpServletResponse response) {
-		Principal principal = UserUtils.getPrincipal();
+//		Principal principal = UserUtils.getPrincipal();
 
 		// 登录成功后，验证码计算器清零
-		isValidateCodeLogin(principal.getLoginName(), false, true);
+//		isValidateCodeLogin(principal.getLoginName(), false, true);
 		
 		if (logger.isDebugEnabled()){
 			logger.debug("show index, active session size: {}", sessionDAO.getActiveSessions(false).size());
@@ -153,15 +150,15 @@ public class LoginController extends BaseController{
 		}
 		
 		// 如果是手机登录，则返回JSON字符串
-		if (principal.isMobileLogin()){
-			if (request.getParameter("login") != null){
-				return renderString(response, principal);
-			}
-			if (request.getParameter("index") != null){
-				return "modules/sys/sysIndex";
-			}
-			return "redirect:" + adminPath + "/login";
-		}
+//		if (principal.isMobileLogin()){
+//			if (request.getParameter("login") != null){
+//				return renderString(response, principal);
+//			}
+//			if (request.getParameter("index") != null){
+//				return "modules/sys/sysIndex";
+//			}
+//			return "redirect:" + adminPath + "/login";
+//		}
 		
 //		// 登录成功后，获取上次登录的当前站点ID
 //		UserUtils.putCache("siteId", StringUtils.toLong(CookieUtils.getCookie(request, "siteId")));

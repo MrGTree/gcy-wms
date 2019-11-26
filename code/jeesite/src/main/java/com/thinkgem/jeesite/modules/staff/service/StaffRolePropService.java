@@ -22,7 +22,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class StaffRolePropService extends CrudService<StaffRolePropDao, StaffRoleProp> {
 
-	@Autowired
+	//@Autowired
 	private StaffRolePropDao staffRolePropDao;
 
 	public StaffRoleProp get(String id) {

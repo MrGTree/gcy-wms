@@ -155,13 +155,13 @@
 					<li id="themeSwitch" class="dropdown">
 						<a class="dropdown-toggle" data-toggle="dropdown" href="#" title="主题切换"><i class="icon-th-large"></i></a>
 						<ul class="dropdown-menu">
-							<c:forEach items="${fns:getDictList('theme')}" var="dict"><li><a href="#" onclick="location='${pageContext.request.contextPath}/theme/${dict.value}?url='+location.href">${dict.label}</a></li></c:forEach>
+							<%--<c:forEach items="${fns:getDictList('theme')}" var="dict"><li><a href="#" onclick="location='${pageContext.request.contextPath}/theme/${dict.value}?url='+location.href">${dict.label}</a></li></c:forEach>--%>
 							<li><a href="javascript:cookie('tabmode','${tabmode eq '1' ? '0' : '1'}');location=location.href">${tabmode eq '1' ? '关闭' : '开启'}页签模式</a></li>
 						</ul>
 						<!--[if lte IE 6]><script type="text/javascript">$('#themeSwitch').hide();</script><![endif]-->
 					</li>
 					<li id="userInfo" class="dropdown">
-						<a class="dropdown-toggle" data-toggle="dropdown" href="#" title="个人信息">您好, ${fns:getUser().name}&nbsp;<span id="notifyNum" class="label label-info hide"></span></a>
+						<a class="dropdown-toggle" data-toggle="dropdown" href="#" title="个人信息">您好, <%--${fns:getUser().name}--%>&nbsp;<span id="notifyNum" class="label label-info hide"></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="${ctx}/sys/user/info" target="mainFrame"><i class="icon-user"></i>&nbsp; 个人信息</a></li>
 							<li><a href="${ctx}/sys/user/modifyPwd" target="mainFrame"><i class="icon-lock"></i>&nbsp;  修改密码</a></li>
@@ -183,7 +183,7 @@
 				<div class="nav-collapse">
 					<ul id="menu" class="nav" style="*white-space:nowrap;float:none;">
 						<c:set var="firstMenu" value="true"/>
-						<c:forEach items="${fns:getMenuList()}" var="menu" varStatus="idxStatus">
+						<%--<c:forEach items="${fns:getMenuList()}" var="menu" varStatus="idxStatus">
 							<c:if test="${menu.parent.id eq '1'&&menu.isShow eq '1'}">
 								<li class="menu ${not empty firstMenu && firstMenu ? ' active' : ''}">
 									<c:if test="${empty menu.href}">
@@ -198,7 +198,7 @@
 								</c:if>
 								<c:set var="firstMenu" value="false"/>
 							</c:if>
-						</c:forEach><%--
+						</c:forEach>--%><%--
 						<shiro:hasPermission name="cms:site:select">
 						<li class="dropdown">
 							<a class="dropdown-toggle" data-toggle="dropdown" href="#">${fnc:getSite(fnc:getCurrentSiteId()).name}<b class="caret"></b></a>
@@ -222,7 +222,7 @@
 				</div>
 			</div>
 		    <div id="footer" class="row-fluid">
-	            Copyright &copy; 2012-${fns:getConfig('copyrightYear')} ${fns:getConfig('productName')} - Powered By <a href="http://jeesite.com" target="_blank">JeeSite</a> ${fns:getConfig('version')}
+	            Copyright &copy; 2012-${fns:getConfig('copyrightYear')} ${fns:getConfig('productName')} - Powered By <a href="http://githb.io" target="_blank">视频监控</a> ${fns:getConfig('version')}
 			</div>
 		</div>
 	</div>

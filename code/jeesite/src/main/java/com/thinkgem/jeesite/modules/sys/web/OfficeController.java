@@ -36,7 +36,7 @@ import java.util.Map;
 @RequestMapping(value = "${adminPath}/sys/office")
 public class OfficeController extends BaseController {
 
-	@Autowired
+	//@Autowired
 	private OfficeService officeService;
 	
 	@ModelAttribute("office")

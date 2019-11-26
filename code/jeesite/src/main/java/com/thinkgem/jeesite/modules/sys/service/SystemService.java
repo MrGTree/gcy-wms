@@ -48,22 +48,22 @@ public class SystemService extends BaseService implements InitializingBean {
 	public static final int HASH_INTERATIONS = 1024;
 	public static final int SALT_SIZE = 8;
 	
-	@Autowired
+	//@Autowired
 	private UserDao userDao;
-	@Autowired
+	//@Autowired
 	private RoleDao roleDao;
-	@Autowired
+	//@Autowired
 	private MenuDao menuDao;
-	@Autowired
+	//@Autowired
 	private SessionDAO sessionDao;
-	@Autowired
+	//@Autowired
 	private SystemAuthorizingRealm systemRealm;
 	
 	public SessionDAO getSessionDao() {
 		return sessionDao;
 	}
 
-	@Autowired
+	//@Autowired
 	private IdentityService identityService;
 
 	//-- User Service --//

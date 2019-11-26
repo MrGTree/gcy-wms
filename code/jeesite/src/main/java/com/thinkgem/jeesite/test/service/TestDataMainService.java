@@ -26,7 +26,7 @@ import com.thinkgem.jeesite.test.dao.TestDataChildDao;
 @Transactional(readOnly = true)
 public class TestDataMainService extends CrudService<TestDataMainDao, TestDataMain> {
 
-	@Autowired
+	//@Autowired
 	private TestDataChildDao testDataChildDao;
 	
 	public TestDataMain get(String id) {

@@ -27,7 +27,7 @@ import com.thinkgem.jeesite.modules.sys.entity.Office;
 @Transactional(readOnly = true)
 public class StatsService extends BaseService {
 
-	@Autowired
+	//@Autowired
 	private ArticleDao articleDao;
 	
 	public List<Category> article(Map<String, Object> paramMap) {
