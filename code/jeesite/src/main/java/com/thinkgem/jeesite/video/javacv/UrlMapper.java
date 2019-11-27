@@ -1,6 +1,7 @@
 package com.thinkgem.jeesite.video.javacv;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class UrlMapper implements Serializable {
 
@@ -40,6 +41,21 @@ public class UrlMapper implements Serializable {
 
     public void setCamerName(String camerName) {
         this.camerName = camerName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        UrlMapper urlMapper = (UrlMapper) o;
+        return Objects.equals(inputUrl, urlMapper.inputUrl) &&
+                Objects.equals(outPutUrl, urlMapper.outPutUrl) &&
+                Objects.equals(camerName, urlMapper.camerName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(inputUrl, outPutUrl, camerName);
     }
 
     @Override

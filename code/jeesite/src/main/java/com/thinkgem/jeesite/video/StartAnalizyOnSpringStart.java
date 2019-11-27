@@ -1,9 +1,7 @@
 package com.thinkgem.jeesite.video;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -19,7 +17,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -38,13 +36,9 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
         //表示是Spring容易创建时
         if (parent == null) {
             //服务器启动的时候，获取路径
-            String s = Global.getConfig("video.monitor.urlConfig");
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-                List<UrlMapper> urlMappers = objectMapper.readValue(s, new TypeReference<List<UrlMapper>>() {
-                });
-                logger.debug("spring start urlMapper -->{}" + urlMappers);
-                if (CollectionUtils.isNotEmpty(urlMappers)) {
+
+            Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+            if (CollectionUtils.isNotEmpty(urlMappers)) {
 
 //                    int[] retCode = new int[1];
 //                    String lic = readToString(Global.getConfig("video.monitor.LICENSE_PATH"));
@@ -59,23 +53,20 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
 //                        return;
 //                    }
 
-                    // 允许创建程数
-                    int nThreads = 16;
-                    // 定义固定数量线程池
-                    ExecutorService pool = Executors.newFixedThreadPool(nThreads);
+                // 允许创建程数
+                int nThreads = 16;
+                // 定义固定数量线程池
+                ExecutorService pool = Executors.newFixedThreadPool(urlMappers.size());
 
-                    // 每个用一个线程处理
-                    for (UrlMapper urlMapper : urlMappers) {
-                        pool.execute(new VideoAnalizyHandler(urlMapper));
-                    }
-
-                    pool.shutdown();
-
+                // 每个用一个线程处理
+                for (UrlMapper urlMapper : urlMappers) {
+                    pool.execute(new VideoAnalizyHandler(urlMapper));
                 }
 
-            } catch (IOException e) {
-                logger.error("解析路径出错" + e);
+                pool.shutdown();
+
             }
+
         }
     }
 

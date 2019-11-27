@@ -6,12 +6,16 @@ package com.thinkgem.jeesite.modules.test.web;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.common.web.BaseController;
 import com.thinkgem.jeesite.video.javacv.CloseMan;
 import com.thinkgem.jeesite.video.javacv.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Man;
 import com.thinkgem.jeesite.video.javacv.RuleBreak;
+import com.thinkgem.jeesite.video.javacv.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +26,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.thinkgem.jeesite.video.javacv.ConvertVideoPakcet.getCloseMan;
 
@@ -57,6 +64,37 @@ public class TestController extends BaseController {
     }
 
     /**
+     * 测试通知请求
+     * a/test/test/startAnalizy
+     *
+     * @return
+     * @throws
+     */
+    @RequestMapping(value = "startAnalizy")
+    @ResponseBody
+    public String startAnalizy(String password) {
+        if (!StringUtils.equals("1qaz@WSX",password)){
+            return "fuck";
+        }
+        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+
+        if (CollectionUtils.isNotEmpty(urlMappers)) {
+            // 定义固定数量线程池
+            ExecutorService pool = Executors.newFixedThreadPool(urlMappers.size());
+            // 每个用一个线程处理
+            for (UrlMapper urlMapper : urlMappers) {
+                pool.execute(new VideoAnalizyHandler(urlMapper));
+            }
+            pool.shutdown();
+            return "push ok";
+        }
+
+        return "no new urlMapper need to push ";
+
+    }
+
+
+    /**
      * 测试算法功能，不含图片识别
      * a/test/test/websocket
      *
@@ -67,17 +105,19 @@ public class TestController extends BaseController {
     @ResponseBody
     public String analizy() throws InterruptedException {
 
-        ArrayList<Man> manList = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
-            Man man = new Man(i * 60, i * 30);
-            manList.add(man);
-
-        }
-
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
         for (; ; ) {
             long startTime = System.currentTimeMillis();
+
+            ArrayList<Man> manList = new ArrayList<>();
+            Random random = new Random();
+
+            for (int i = 0; i < 50; i++) {
+                Man man = new Man(random.nextInt(1000), random.nextInt(1000));
+                manList.add(man);
+
+            }
 
 
             manLoop:

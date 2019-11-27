@@ -305,6 +305,9 @@ public class ConvertVideoPakcet {
 
         logger.debug("analizy go go go go ");
 
+        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+        urlMappers.remove(urlMapper);
+
         // Determine required buffer size and allocate buffer
         BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(0, width, height, 1)));
 
