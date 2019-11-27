@@ -1,6 +1,8 @@
 package com.thinkgem.jeesite.video.javacv;
 
-public class UrlMapper {
+import java.io.Serializable;
+
+public class UrlMapper implements Serializable {
 
     private String inputUrl;
     private String outPutUrl;
@@ -38,5 +40,14 @@ public class UrlMapper {
 
     public void setCamerName(String camerName) {
         this.camerName = camerName;
+    }
+
+    @Override
+    public String toString() {
+        return "UrlMapper{" +
+                "inputUrl='" + inputUrl + '\'' +
+                ", outPutUrl='" + outPutUrl + '\'' +
+                ", camerName='" + camerName + '\'' +
+                '}';
     }
 }

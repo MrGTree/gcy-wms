@@ -28,13 +28,12 @@ public class VideoAnalizyHandler implements Runnable {
     @Override
     public void run() {
         String threadName = Thread.currentThread().getName();
-        logger.info(threadName + "monitor start update");
+        logger.debug(threadName + " monitor start update");
         try {
             new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).go();
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:" + e.getMessage(), e);
         }
-        logger.info(threadName + " monitor update:{}", System.currentTimeMillis());
     }
 }
 

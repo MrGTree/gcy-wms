@@ -1,6 +1,15 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sensetime.ad.core.StCrowdDensityDetector;
+import com.sensetime.ad.core.StFaceException;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.sensetime.ad.sdk.StPointF;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
@@ -16,7 +25,10 @@ import org.bytedeco.javacpp.DoublePointer;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber.Exception;
-import org.bytedeco.javacv.Java2DFrameConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.socket.TextMessage;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -53,6 +65,9 @@ import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
  *  
  */
 public class ConvertVideoPakcet {
+
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
     FFmpegFrameGrabber grabber = null;
     FFmpegFrameRecorder record = null;
     int width = -1, height = -1;
@@ -65,6 +80,12 @@ public class ConvertVideoPakcet {
     protected int bitrate;// 比特率
 
     private UrlMapper urlMapper;
+
+    private Long pushVideoLong;
+
+    private Float useScore;
+
+    private Float tooCloseValue;
 
     public ConvertVideoPakcet() {
     }
@@ -79,20 +100,26 @@ public class ConvertVideoPakcet {
     private int audioBitrate;
     private int sampleRate;
 
-    private static final String LICENSE_PATH = "/root/Desktop/models/license.lic";
-    private static final String MODEL_PATH = "/root/Desktop/models/M_Crowd_Keypoint_1.0.0.model";
+    @Value("${licensePath:/root/Desktop/models/license.lic}")
+    private String LICENSE_PATH;
+    @Value("${modelPath:/root/Desktop/models/M_Crowd_Keypoint_1.0.0.model")
+    private String MODEL_PATH;
 
-    private Java2DFrameConverter javaconverter = new Java2DFrameConverter();
 
-//    private StCrowdDensityDetector detector;
-//
-//    {
-//        try {
-//            detector = new StCrowdDensityDetector(MODEL_PATH);
-//        } catch (StFaceException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    private StCrowdDensityDetector detector;
+
+    {
+        try {
+            detector = new StCrowdDensityDetector(MODEL_PATH);
+        } catch (StFaceException e) {
+            logger.error(" new StCrowdDensityDetector error " + e);
+        }
+
+        pushVideoLong = Global.getPushVideoLong();
+        useScore = Global.getUseScore();
+        tooCloseValue = Global.getTooCloseValue();
+
+    }
 
     private AVFormatContext pFormatCtx;//视频格式上下文
     private int videoStreamIndex;//视频流所在的通道
@@ -112,6 +139,7 @@ public class ConvertVideoPakcet {
 
 
     public ConvertVideoPakcet from(String src) throws Exception {
+        logger.debug("monitor from url:{}" + src);
         // 采集/抓取器
         grabber = new FFmpegFrameGrabber(src);
 //        if (src.indexOf("rtsp") >= 0) {
@@ -124,7 +152,7 @@ public class ConvertVideoPakcet {
         }
         // 视频参数
         audiocodecid = grabber.getAudioCodec();
-        System.err.println("音频编码：" + audiocodecid);
+        logger.debug("{}的音频编码：{}", src, audiocodecid);
         codecid = grabber.getVideoCodec();
         framerate = grabber.getVideoFrameRate();// 帧率
         bitrate = grabber.getVideoBitrate();// 比特率
@@ -240,6 +268,7 @@ public class ConvertVideoPakcet {
 
     public ConvertVideoPakcet to(String out) throws IOException {
         // 录制/推流器
+        logger.debug("monitor push video start--->{}", out);
         record = new FFmpegFrameRecorder(out, width, height);
         record.setVideoOption("crf", "18");
         record.setGopSize(2);
@@ -252,13 +281,13 @@ public class ConvertVideoPakcet {
         AVFormatContext fc = null;
         if (out.indexOf("rtmp") >= 0 || out.indexOf("flv") > 0) {
             // 封装格式flv
-            record.setFormat("flv");
+            record.setFormat("mp4");
             record.setAudioCodecName("aac");
             record.setVideoCodec(codecid);
             fc = grabber.getFormatContext();
         }
         record.start(fc);
-        System.out.println("record.start");
+        logger.debug("record.start");
         return this;
     }
 
@@ -270,11 +299,11 @@ public class ConvertVideoPakcet {
      */
 
 
-    public ConvertVideoPakcet go() throws IOException, InterruptedException {
+    public ConvertVideoPakcet go() throws StFaceException, InterruptedException {
         long err_index = 0;//采集或推流导致的错误次数
         //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
 
-        System.out.println("record go");
+        logger.debug("analizy go go go go ");
 
         // Determine required buffer size and allocate buffer
         BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(0, width, height, 1)));
@@ -282,8 +311,13 @@ public class ConvertVideoPakcet {
         // Assign appropriate parts of buffer to image planes in pFrameRGB.
         av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, 0, width, height, 1);
 
+        //分析时违规记录
+        HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
+        //for循环获取视频帧
         for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
+            //获取分析开始，总时间需要一秒
+            long startTime = System.currentTimeMillis();
             AVPacket pkt = null;
             try {
                 //没有解码的音视频帧
@@ -305,61 +339,155 @@ public class ConvertVideoPakcet {
                             sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
                             //Convert BGR to ByteBuffer
                             byte[] bytes = saveFrame(outFrameRGB, width, height);
-//                            try {
-//                                StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-//                                if (4 < crowdResult.getNumberOfPeople() ){
-//                                    record.start();
-//                                    err_index += (record.recordPacket(pkt) ? 0 : 1);//如果失败err_index自增1
-                                        av_free_packet(pkt);
-                            System.out.println("go = " + true);
-                            if (true) {
-                                new ConvertVideoPakcet().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
-                            } else {
+
+                            av_free_packet(pkt);
+                            //获取分析这一视频帧图片
+                            StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
+                            //大与两个人
+                            if (crowdResult != null && 2 < crowdResult.getNumberOfPeople()) {
+                                StPointF[] keypoints = crowdResult.getKeypoints();
+                                //初始化有效的manList
+                                ArrayList<Man> manList = new ArrayList<>();
+                                if (keypoints != null && keypoints.length > 1) {
+                                    for (int j = 0; j < keypoints.length; j++) {
+                                        float[] pointsScore = crowdResult.getPointsScore();
+                                        float score = pointsScore[j];
+                                        if (score > useScore) {
+                                            manList.add(new Man(keypoints[i].x, keypoints[j].y));
+                                        }
+                                    }
+                                }
+                                //初始结束，循环分析
+                                manLoop:
+                                for (Man manOut : manList) {
+                                    for (Man manIn : manList) {
+                                        double distance = Math.sqrt(Math.pow(manOut.getX() - manIn.getX(), 2) + Math.pow(manOut.getY() - manIn.getY(), 2));
+                                        if (distance == 0) {
+                                            continue;
+                                        }
+
+                                        CloseRelation closeRelation = null;
+                                        Man key = null;
+                                        if (closeRelationMap.size() > 0) {
+                                            for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
+                                                key = manCloseRelationEntry.getKey();
+                                                if (manOut.equals(key)) {
+                                                    closeRelation = manCloseRelationEntry.getValue();
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        //距离小于 200 像素
+                                        if (distance < tooCloseValue) {
+                                            if (closeRelation != null) {
+                                                Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
+                                                if (closeManSet != null && !closeManSet.isEmpty()) {
+                                                    CloseMan closeManOn = getCloseMan(closeManSet, manIn);
+                                                    if (closeManOn == null) {
+                                                        CloseMan closeMan = new CloseMan(1, manIn, true);
+                                                        closeManSet.add(closeMan);
+                                                        continue;
+                                                    } else {
+                                                        Man man = closeManOn.getMan();
+                                                        int time = closeManOn.getTime();
+                                                        if (time >= 6) {
+                                                            //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
+                                                            new ConvertVideoPakcet().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
+                                                            logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}",manOut,manIn,time +1 ,distance);
+                                                            RuleBreak ruleBreak = new RuleBreak(manOut, manIn, urlMapper.getCamerName());
+                                                            ObjectMapper objectMapper = new ObjectMapper();
+                                                            SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(objectMapper.writeValueAsString(ruleBreak)));
+                                                            //清空map
+                                                            closeRelationMap.clear();
+                                                            break manLoop;
+                                                        } else {
+                                                            //时间小了
+                                                            if (closeManOn.isCurrentInc()) {
+                                                                continue;
+                                                            }
+                                                            closeManOn.setCurrentInc(true);
+                                                            closeManSet.remove(closeManOn);
+                                                            CloseMan closeMan1 = new CloseMan(time + 1, manIn);
+                                                            closeMan1.setCurrentInc(true);//此次增长标记
+                                                            closeManSet.add(closeMan1);
+                                                            continue;
+                                                        }
+                                                    }
+                                                } else {
+                                                    Set<CloseMan> closeManNewSet = new HashSet<>();
+                                                    CloseMan closeMan = new CloseMan(1, manIn, true);
+                                                    closeManNewSet.add(closeMan);
+                                                    continue;
+                                                }
+                                            } else {
+                                                Set<CloseMan> closeManNewSet = new HashSet<>();
+                                                CloseMan closeMan = new CloseMan(1, manIn, true);
+                                                closeManNewSet.add(closeMan);
+                                                CloseRelation closeRelation1 = new CloseRelation(manOut, closeManNewSet);
+                                                closeRelationMap.put(manOut, closeRelation1);
+                                                continue;
+                                            }
+                                        } else {
+                                            //不违规，清数据
+                                            if (closeRelation == null) {
+                                                continue;
+                                            } else {
+                                                Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
+                                                if (closeManSet == null || closeManSet.isEmpty()) {
+                                                    closeRelationMap.remove(key);
+                                                    continue;
+                                                } else {
+                                                    CloseMan closeMan = getCloseMan(closeManSet, manIn);
+                                                    if (closeMan == null) {
+                                                        continue;
+                                                    } else {
+                                                        closeManSet.remove(closeMan);
+                                                    }
+                                                }
+
+                                            }
+
+
+                                        }
+                                    }
+
+
+                                }
+                                //循环判断结束，准备下一秒数据
+                                if (closeRelationMap != null && !closeRelationMap.isEmpty()) {
+                                    //这一秒的计步结束，初始化
+                                    for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
+                                        CloseRelation value = manCloseRelationEntry.getValue();
+                                        Set<CloseMan> closeManSet = value.getCloseManSet();
+                                        if (closeManSet != null && !closeManSet.isEmpty()) {
+                                            for (CloseMan closeMan : closeManSet) {
+                                                closeMan.setCurrentInc(false);
+                                            }
+                                        }
+                                    }
+                                }
                             }
-//                                }else {
-//                                    record.flush();
-//                                    record.stop();
-//                                    System.out.println("too litter Number of People: " + crowdResult.getNumberOfPeople());
-//                                }
-//                            } catch (StFaceException e) {
-//                                e.printStackTrace();
-//                            }
 
                         }
                     }
                 }
-
-//                BufferedImage buffImg=javaconverter.convert(grabber.grab());
-//                if(buffImg != null ){
-//                    byte[] data  =  ((DataBufferByte)buffImg.getData().getDataBuffer()).getData();
-//
-//                    try {
-//                        StCrowdDensityResult crowdResult = detector.track(data, StImageFormat.ST_PIX_FMT_BGR888, buffImg.getWidth(), buffImg.getHeight());
-//
-//                        if (4 < crowdResult.getNumberOfPeople() ){
-                //不需要编码直接把音视频帧推出去
-//                            err_index += (record.recordPacket(pkt) ? 0 : 1);//如果失败err_index自增1
-//                            av_free_packet(pkt);
-//                        }else {
-//                            System.out.println("too litter Number of People: " + crowdResult.getNumberOfPeople());
-////                            record.flush();
-//                        }
-//
-//                    } catch (StFaceException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//                 opencv_imgcodecs.cvSaveImage("hello"+i +".jpg", converter.convert(grabber.grab()));//来保存图片
-            } catch (Exception e) {//推流失败
+            } catch (Exception e) {
                 err_index++;
             } catch (IOException e) {
                 err_index++;
             }
+            //获取单个视频帧结束
+            long endTime = System.currentTimeMillis();
+            long timeSleep = 1000 - (endTime - startTime);
+            if (timeSleep > 0) {
+                Thread.sleep(timeSleep);
+            }
         }
 
-//        if (detector != null) {
-//            detector.release();
-//        }
+        if (detector != null) {
+            detector.release();
+        }
         return this;
     }
 
@@ -368,7 +496,7 @@ public class ConvertVideoPakcet {
         long err_index = 0;//采集或推流导致的错误次数
         //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
 
-        System.out.println("record pushVideo start");
+        logger.info("record pushVideo start");
 
         long startTime = System.currentTimeMillis();
         long endTime;
@@ -383,28 +511,25 @@ public class ConvertVideoPakcet {
                     continue;
                 }
 
-
                 err_index += (record.recordPacket(pkt) ? 0 : 1);//如果失败err_index自增1
                 av_free_packet(pkt);
                 endTime = System.currentTimeMillis();
-                if ((endTime - startTime) > 1000 * 60) {
+                if ((endTime - startTime) > 1000 * pushVideoLong) {
                     record.stop();
                     record.release();
-                    System.out.println("record pushVideo end");
+                    grabber.stop();
+                    grabber.release();
+                    logger.info("record pushVideo end");
                     return this;
                 }
-
-//                 opencv_imgcodecs.cvSaveImage("hello"+i +".jpg", converter.convert(grabber.grab()));//来保存图片
             } catch (Exception e) {//推流失败
                 err_index++;
+                logger.error("pushVideo fail " + e);
             } catch (IOException e) {
                 err_index++;
+                logger.error("pushVideo fail " + e);
             }
         }
-
-//        if (detector != null) {
-//            detector.release();
-//        }
         return this;
     }
 
@@ -418,150 +543,6 @@ public class ConvertVideoPakcet {
         return bytes;
     }
 
-    public static void main(String[] args) throws Exception, IOException, InterruptedException {
-//        int[] retCode = new int[1];
-//        String lic = readToString(LICENSE_PATH);
-//        String activeCode = StLibrary.onlineActivite("", lic, retCode);
-//        if (retCode[0] != 0) {
-//            System.out.println("get online activation code failed, rc = " + retCode[0]);
-//            return;
-//        }
-//        retCode[0] = StLibrary.addLic("", lic, activeCode);
-//        if (retCode[0] != 0) {
-//            System.out.println("add lic failed, rc = " + retCode[0]);
-//            return;
-//        }
-
-        //new ConvertVideoPakcet().from("rtmp://www.fourhu.xyz:1935/live/livestream").go();
-
-        ArrayList<Man> manList = new ArrayList<>();
-        for (int i = 0; i < 50 ; i++) {
-            Man man = new Man(i * 60, i*30);
-            manList.add(man);
-
-        }
-
-        HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
-
-        for (; ; ) {
-            long startTime = System.currentTimeMillis();
-
-
-            manLoop:
-            for (Man manOut : manList) {
-                for (Man manIn : manList) {
-                    double distance = Math.sqrt(Math.pow(manOut.getX() - manIn.getX(), 2) + Math.pow(manOut.getY() - manIn.getY(), 2));
-                    if (distance == 0) {
-                        continue;
-                    }
-
-                    CloseRelation closeRelation = null;
-                    Man key = null;
-                    if (closeRelationMap.size() > 0) {
-                        for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
-                            key = manCloseRelationEntry.getKey();
-                            if (manOut.equals(key)) {
-                                closeRelation = manCloseRelationEntry.getValue();
-                                break;
-                            }
-                        }
-                    }
-
-                    //距离小于 200 像素
-                    if (distance < 200) {
-                        if (closeRelation != null) {
-                            Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
-                            if (closeManSet != null && !closeManSet.isEmpty()) {
-                                CloseMan closeManOn = getCloseMan(closeManSet, manIn);
-                                if (closeManOn == null) {
-                                    CloseMan closeMan = new CloseMan(1, manIn,true);
-                                    closeManSet.add(closeMan);
-                                    continue;
-                                } else {
-                                    Man man = closeManOn.getMan();
-                                    int time = closeManOn.getTime();
-                                    if (time >= 6) {
-                                        //违规了，发流等待 3 分钟
-                                        System.out.println(manOut + " | " + man + "|" + time + "|" + distance);
-                                        //清空map
-                                        closeRelationMap.clear();
-                                        break manLoop;
-                                    } else {
-                                        //时间小了
-                                        if (closeManOn.isCurrentInc()){
-                                            continue ;
-                                        }
-                                        closeManOn.setCurrentInc(true);
-                                        closeManSet.remove(closeManOn);
-                                        CloseMan closeMan1 = new CloseMan(time + 1, manIn);
-                                        closeMan1.setCurrentInc(true);//此次增长标记
-                                        closeManSet.add(closeMan1);
-                                        continue;
-                                    }
-                                }
-                            } else {
-                                Set<CloseMan> closeManNewSet = new HashSet<>();
-                                CloseMan closeMan = new CloseMan(1, manIn,true);
-                                closeManNewSet.add(closeMan);
-                                continue;
-                            }
-                        } else {
-                            Set<CloseMan> closeManNewSet = new HashSet<>();
-                            CloseMan closeMan = new CloseMan(1, manIn,true);
-                            closeManNewSet.add(closeMan);
-                            CloseRelation closeRelation1 = new CloseRelation(manOut, closeManNewSet);
-                            closeRelationMap.put(manOut, closeRelation1);
-                            continue;
-                        }
-                    } else {
-                        //不违规，清数据
-                        if (closeRelation == null) {
-                            continue;
-                        } else {
-                            Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
-                            if (closeManSet == null || closeManSet.isEmpty()) {
-                                closeRelationMap.remove(key);
-                                continue;
-                            } else {
-                                CloseMan closeMan = getCloseMan(closeManSet, manIn);
-                                if (closeMan == null) {
-                                    continue;
-                                } else {
-                                    closeManSet.remove(closeMan);
-                                }
-                            }
-
-                        }
-
-
-                    }
-                }
-
-
-            }
-            if (closeRelationMap != null && !closeRelationMap.isEmpty()) {
-                //这一秒的计步结束，初始化
-                for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
-                    CloseRelation value = manCloseRelationEntry.getValue();
-                    Set<CloseMan> closeManSet = value.getCloseManSet();
-                    if (closeManSet != null && !closeManSet.isEmpty()) {
-                        for (CloseMan closeMan : closeManSet) {
-                            closeMan.setCurrentInc(false);
-                        }
-                    }
-                }
-            }
-
-
-            long endTime = System.currentTimeMillis();
-            //1000 - (endTime - startTime)
-            //System.out.println("(endTime - startTime) = " + (endTime - startTime));
-            long timeSleep = 1000 - (endTime - startTime);
-            if (timeSleep > 0 ){
-                Thread.sleep(timeSleep);
-            }
-        }
-    }
 
     public static CloseMan getCloseMan(Set<CloseMan> closeManSet, Man manIn) {
         if (CollectionUtils.isEmpty(closeManSet)) {

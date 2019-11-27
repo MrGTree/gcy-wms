@@ -1,21 +1,38 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import com.thinkgem.jeesite.common.config.Global;
+
 import java.io.Serializable;
 import java.util.Objects;
 
 public class Man implements Serializable {
 
-    private int x;
-    private int y;
+    private float x;
+    private float y;
 
     public Man() {
     }
 
-    public Man(int x, int y) {
+    public Man(float x, float y) {
         this.x = x;
         this.y = y;
     }
 
+    public float getX() {
+        return x;
+    }
+
+    public void setX(float x) {
+        this.x = x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public void setY(float y) {
+        this.y = y;
+    }
 
     /**
      * 100个像素内，表示是一个人
@@ -27,8 +44,8 @@ public class Man implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Man man = (Man) o;
-        return Math.abs(x - man.x) < 50 &&
-                Math.abs(y - man.y) < 50;
+        return Math.abs(x - man.x) < Global.getOneManValue() &&
+                Math.abs(y - man.y) < Global.getOneManValue();
     }
 
     @Override
@@ -36,21 +53,6 @@ public class Man implements Serializable {
         return Objects.hash(x, y);
     }
 
-    public int getX() {
-        return x;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
 
     @Override
     public String toString() {

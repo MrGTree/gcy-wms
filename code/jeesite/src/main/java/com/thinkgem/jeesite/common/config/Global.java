@@ -3,16 +3,15 @@
  */
 package com.thinkgem.jeesite.common.config;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-
-import org.springframework.core.io.DefaultResourceLoader;
-
 import com.ckfinder.connector.ServletContextFactory;
 import com.google.common.collect.Maps;
 import com.thinkgem.jeesite.common.utils.PropertiesLoader;
 import com.thinkgem.jeesite.common.utils.StringUtils;
+import org.springframework.core.io.DefaultResourceLoader;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * 全局配置类
@@ -104,6 +103,30 @@ public class Global {
 	public static String getUrlSuffix() {
 		return getConfig("urlSuffix");
 	}
+
+
+	/**
+	 *
+	 */
+	public static long getPushVideoLong() {
+		return Long.valueOf(getConfig("pushVideoLong"));
+	}
+
+	/**
+	 *
+	 */
+	public static double getOneManValue() {
+		return  Double.valueOf(getConfig("oneManValue"));
+	}
+
+	public static Float getUseScore() {
+		return  Float.valueOf(getConfig("useScore"));
+	}
+
+	public static Float getTooCloseValue() {
+		return  Float.valueOf(getConfig("tooCloseValue"));
+	}
+
 	
 	/**
 	 * 是否是演示模式，演示模式下不能修改用户、角色、密码、菜单、授权

@@ -43,7 +43,7 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
             try {
                 List<UrlMapper> urlMappers = objectMapper.readValue(s, new TypeReference<List<UrlMapper>>() {
                 });
-
+                logger.debug("spring start urlMapper -->{}" + urlMappers);
                 if (CollectionUtils.isNotEmpty(urlMappers)) {
 
 //                    int[] retCode = new int[1];
