@@ -18,6 +18,7 @@ import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.socket.TextMessage;
@@ -70,20 +71,40 @@ public class TestController extends BaseController {
      * @return
      * @throws
      */
+    @RequestMapping(value = "toStartAnalizy")
+    public String toStartAnalizy(String password) {
+        if (!StringUtils.equals("1qaz@WSX",password)){
+            return "redirect:/a";
+        }
+        return "modules/test/testForm";
+
+    }
+
+    @ModelAttribute
+    public UrlMapper get() {
+       return new UrlMapper();
+    }
+
+    /**
+     * 测试通知请求
+     * a/test/test/startAnalizy
+     *
+     * @return
+     * @throws
+     */
     @RequestMapping(value = "startAnalizy")
     @ResponseBody
-    public String startAnalizy(String password) {
-        if (!StringUtils.equals("1qaz@WSX",password)){
-            return "fuck";
-        }
+    public String startAnalizy(UrlMapper urlMapper) {
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
-
+        if (urlMapper != null){
+            urlMappers.add(urlMapper);
+        }
         if (CollectionUtils.isNotEmpty(urlMappers)) {
             // 定义固定数量线程池
             ExecutorService pool = Executors.newFixedThreadPool(urlMappers.size());
             // 每个用一个线程处理
-            for (UrlMapper urlMapper : urlMappers) {
-                pool.execute(new VideoAnalizyHandler(urlMapper));
+            for (UrlMapper urlMapperPush : urlMappers) {
+                pool.execute(new VideoAnalizyHandler(urlMapperPush));
             }
             pool.shutdown();
             return "push ok";
