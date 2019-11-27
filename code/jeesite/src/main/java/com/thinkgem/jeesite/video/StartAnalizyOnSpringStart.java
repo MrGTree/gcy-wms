@@ -1,6 +1,8 @@
 package com.thinkgem.jeesite.video;
 
 
+import com.sensetime.ad.sdk.StLibrary;
+import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
@@ -35,23 +37,21 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
         ApplicationContext parent = applicationContext.getParent();
         //表示是Spring容易创建时
         if (parent == null) {
-            //服务器启动的时候，获取路径
 
+            int[] retCode = new int[1];
+            String lic = readToString(Global.getConfig("video.monitor.license.path"));
+            String activeCode = StLibrary.onlineActivite("", lic, retCode);
+            if (retCode[0] != 0) {
+                logger.error("get online activation code failed, rc = " + retCode[0]);
+            }
+            retCode[0] = StLibrary.addLic("", lic, activeCode);
+            if (retCode[0] != 0) {
+                logger.error("add lic failed, rc = " + retCode[0]);
+            }
+
+            //服务器启动的时候，获取路径
             Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
             if (CollectionUtils.isNotEmpty(urlMappers)) {
-
-//                    int[] retCode = new int[1];
-//                    String lic = readToString(Global.getConfig("video.monitor.LICENSE_PATH"));
-//                    String activeCode = StLibrary.onlineActivite("", lic, retCode);
-//                    if (retCode[0] != 0) {
-//                        logger.error("get online activation code failed, rc = " + retCode[0]);
-//                        return;
-//                    }
-//                    retCode[0] = StLibrary.addLic("", lic, activeCode);
-//                    if (retCode[0] != 0) {
-//                        logger.error("add lic failed, rc = " + retCode[0]);
-//                        return;
-//                    }
 
                 // 允许创建程数
                 int nThreads = 16;

@@ -109,22 +109,26 @@ public class Global {
 	 *
 	 */
 	public static long getPushVideoLong() {
-		return Long.valueOf(getConfig("pushVideoLong"));
+		return Long.valueOf(getConfig("video.monitor.push.video.length"));
 	}
 
 	/**
 	 *
 	 */
 	public static double getOneManValue() {
-		return  Double.valueOf(getConfig("oneManValue"));
+		return  Double.valueOf(getConfig("video.monitor.one.man.value"));
 	}
 
 	public static Float getUseScore() {
-		return  Float.valueOf(getConfig("useScore"));
+		return  Float.valueOf(getConfig("video.monitor.use.score"));
 	}
 
 	public static Float getTooCloseValue() {
-		return  Float.valueOf(getConfig("tooCloseValue"));
+		return  Float.valueOf(getConfig("video.monitor.close.value"));
+	}
+
+	public static String getModelPath() {
+		return getConfig("video.monitor.model.path");
 	}
 
 	

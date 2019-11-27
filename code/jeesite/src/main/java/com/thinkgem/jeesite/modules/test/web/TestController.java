@@ -117,7 +117,7 @@ public class TestController extends BaseController {
 
     /**
      * 测试算法功能，不含图片识别
-     * a/test/test/websocket
+     * a/test/test/analizy
      *
      * @return
      * @throws JsonProcessingException
@@ -127,13 +127,12 @@ public class TestController extends BaseController {
     public String analizy() throws InterruptedException {
 
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
-
+        ArrayList<Man> manList = new ArrayList<>();
         for (; ; ) {
             long startTime = System.currentTimeMillis();
 
-            ArrayList<Man> manList = new ArrayList<>();
+            manList.clear();
             Random random = new Random();
-
             for (int i = 0; i < 50; i++) {
                 Man man = new Man(random.nextInt(1000), random.nextInt(1000));
                 manList.add(man);

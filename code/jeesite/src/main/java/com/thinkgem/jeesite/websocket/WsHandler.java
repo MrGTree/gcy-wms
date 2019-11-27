@@ -1,5 +1,7 @@
 package com.thinkgem.jeesite.websocket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketMessage;
@@ -12,6 +14,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class WsHandler extends TextWebSocketHandler {
 
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
 
     private final static List<WebSocketSession> users;
 
@@ -23,6 +27,7 @@ public class WsHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         //建立连接后的操作
         users.add(session);
+        logger.info("some one use websocket {}" , session);
         super.afterConnectionEstablished(session);
     }
 

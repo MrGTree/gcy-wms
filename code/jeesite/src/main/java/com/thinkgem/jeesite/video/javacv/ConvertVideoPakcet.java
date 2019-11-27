@@ -27,7 +27,6 @@ import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.socket.TextMessage;
 
 import java.io.File;
@@ -100,25 +99,21 @@ public class ConvertVideoPakcet {
     private int audioBitrate;
     private int sampleRate;
 
-    @Value("${licensePath:/root/Desktop/models/license.lic}")
-    private String LICENSE_PATH;
-    @Value("${modelPath:/root/Desktop/models/M_Crowd_Keypoint_1.0.0.model")
-    private String MODEL_PATH;
+    private String modelPath;
 
 
     private StCrowdDensityDetector detector;
 
     {
+        modelPath = Global.getModelPath();
+        tooCloseValue = Global.getTooCloseValue();
+        pushVideoLong = Global.getPushVideoLong();
+        useScore = Global.getUseScore();
         try {
-            detector = new StCrowdDensityDetector(MODEL_PATH);
+            detector = new StCrowdDensityDetector(modelPath);
         } catch (StFaceException e) {
             logger.error(" new StCrowdDensityDetector error " + e);
         }
-
-        pushVideoLong = Global.getPushVideoLong();
-        useScore = Global.getUseScore();
-        tooCloseValue = Global.getTooCloseValue();
-
     }
 
     private AVFormatContext pFormatCtx;//视频格式上下文
