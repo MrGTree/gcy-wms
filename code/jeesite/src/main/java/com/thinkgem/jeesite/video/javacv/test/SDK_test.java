@@ -1,4 +1,4 @@
-package com.thinkgem.jeesite.video.javacv;
+package com.thinkgem.jeesite.video.javacv.test;
 
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;

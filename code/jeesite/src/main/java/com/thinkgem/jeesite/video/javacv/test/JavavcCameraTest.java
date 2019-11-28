@@ -4,7 +4,7 @@
  * 修改时间：2016年6月13日
  * 修改内容：
  */
-package com.thinkgem.jeesite.video.javacv;
+package com.thinkgem.jeesite.video.javacv.test;
 
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacpp.Loader;
