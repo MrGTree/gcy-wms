@@ -411,7 +411,7 @@ public class ConvertVideoPakcet {
                             //获取分析这一视频帧图片
                             StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
-                            logger.info("track success---->{}", JsonMapper.getInstance().toJson(crowdResult));
+                            logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(),crowdResult.getHeight(),crowdResult.getNumberOfPeople(),crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
                             //大与两个人
                             if (crowdResult != null && 2 < crowdResult.getNumberOfPeople()) {
                                 StPointF[] keypoints = crowdResult.getKeypoints();
