@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
@@ -410,6 +409,8 @@ public class ConvertVideoPakcet {
                             av_free_packet(pkt);
                             //获取分析这一视频帧图片
                             StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
+
+                            logger.info("track success---->{}",crowdResult);
                             //大与两个人
                             if (crowdResult != null && 2 < crowdResult.getNumberOfPeople()) {
                                 StPointF[] keypoints = crowdResult.getKeypoints();
