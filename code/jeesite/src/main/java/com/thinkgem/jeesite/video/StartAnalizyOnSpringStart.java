@@ -3,8 +3,9 @@ package com.thinkgem.jeesite.video;
 
 import com.sensetime.ad.sdk.StLibrary;
 import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.utils.FileUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
-import com.thinkgem.jeesite.video.javacv.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
@@ -14,11 +15,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,7 +35,7 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
         if (parent == null) {
 
             int[] retCode = new int[1];
-            String lic = readToString(Global.getConfig("video.monitor.license.path"));
+            String lic = FileUtils.readToString(Global.getConfig("video.monitor.license.path"));
             String activeCode = StLibrary.onlineActivite("", lic, retCode);
             if (retCode[0] != 0) {
                 logger.error("get online activation code failed, rc = " + retCode[0]);
@@ -70,27 +66,4 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
         }
     }
 
-
-    public static String readToString(String fileName) {
-        String encoding = "UTF-8";
-        File file = new File(fileName);
-        long filelength = file.length();
-        byte[] filecontent = new byte[(int) filelength];
-        try {
-            FileInputStream in = new FileInputStream(file);
-            in.read(filecontent);
-            in.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            return new String(filecontent, encoding);
-        } catch (UnsupportedEncodingException e) {
-            System.err.println("The OS does not support " + encoding);
-            e.printStackTrace();
-            return null;
-        }
-    }
 }

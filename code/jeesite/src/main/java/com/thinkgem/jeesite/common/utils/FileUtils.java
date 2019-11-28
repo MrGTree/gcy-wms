@@ -3,27 +3,27 @@
  */
 package com.thinkgem.jeesite.common.utils;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.RandomAccessFile;
-import java.util.Enumeration;
-import java.util.List;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.google.common.collect.Lists;
 import org.apache.tools.zip.ZipEntry;
 import org.apache.tools.zip.ZipFile;
 import org.apache.tools.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
+import java.util.Enumeration;
+import java.util.List;
 
 /**
  * 文件操作工具类
@@ -34,6 +34,28 @@ import com.google.common.collect.Lists;
 public class FileUtils extends org.apache.commons.io.FileUtils {
 	
 	private static Logger logger = LoggerFactory.getLogger(FileUtils.class);
+
+	public static String readToString(String fileName) {
+		String encoding = "UTF-8";
+		File file = new File(fileName);
+		long filelength = file.length();
+		byte[] filecontent = new byte[(int) filelength];
+		try {
+			FileInputStream in = new FileInputStream(file);
+			in.read(filecontent);
+			in.close();
+		} catch (FileNotFoundException e) {
+			logger.error("init license error",e);
+		} catch (IOException e) {
+			logger.error("init license error",e);
+		}
+		try {
+			return new String(filecontent, encoding);
+		} catch (UnsupportedEncodingException e) {
+			logger.error("init license error The OS does not support {}",encoding,e);
+			return null;
+		}
+	}
 
 	/**
 	 * 复制单个文件，如果目标文件存在，则不覆盖

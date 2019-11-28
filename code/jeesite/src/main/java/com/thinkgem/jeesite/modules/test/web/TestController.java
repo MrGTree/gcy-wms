@@ -8,11 +8,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.common.web.BaseController;
-import com.thinkgem.jeesite.video.javacv.CloseMan;
-import com.thinkgem.jeesite.video.javacv.CloseRelation;
-import com.thinkgem.jeesite.video.javacv.Man;
-import com.thinkgem.jeesite.video.javacv.RuleBreak;
-import com.thinkgem.jeesite.video.javacv.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.RuleBreak;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.thinkgem.jeesite.video.javacv.ConvertVideoPakcet.getCloseMan;
+import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 
 /**
  * 测试Controller

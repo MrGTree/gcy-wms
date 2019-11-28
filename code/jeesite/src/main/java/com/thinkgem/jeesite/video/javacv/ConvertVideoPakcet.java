@@ -9,10 +9,15 @@ import com.sensetime.ad.sdk.StImageFormat;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.RuleBreak;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
 import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
 import com.thinkgem.jeesite.websocket.WsHandler;
-import org.apache.commons.collections.CollectionUtils;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
 import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
@@ -31,11 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -449,7 +450,7 @@ public class ConvertVideoPakcet {
                                             if (closeRelation != null) {
                                                 Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
                                                 if (closeManSet != null && !closeManSet.isEmpty()) {
-                                                    CloseMan closeManOn = getCloseMan(closeManSet, manIn);
+                                                    CloseMan closeManOn = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
                                                     if (closeManOn == null) {
                                                         CloseMan closeMan = new CloseMan(1, manIn, true);
                                                         closeManSet.add(closeMan);
@@ -504,7 +505,7 @@ public class ConvertVideoPakcet {
                                                     closeRelationMap.remove(key);
                                                     continue;
                                                 } else {
-                                                    CloseMan closeMan = getCloseMan(closeManSet, manIn);
+                                                    CloseMan closeMan = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
                                                     if (closeMan == null) {
                                                         continue;
                                                     } else {
@@ -612,41 +613,4 @@ public class ConvertVideoPakcet {
         return bytes;
     }
 
-
-    public static CloseMan getCloseMan(Set<CloseMan> closeManSet, Man manIn) {
-        if (CollectionUtils.isEmpty(closeManSet)) {
-            return null;
-        }
-        for (CloseMan closeMan : closeManSet) {
-            Man man = closeMan.getMan();
-            if (man.equals(manIn)) {
-                return closeMan;
-            }
-        }
-        return null;
-    }
-
-
-    public static String readToString(String fileName) {
-        String encoding = "UTF-8";
-        File file = new File(fileName);
-        long filelength = file.length();
-        byte[] filecontent = new byte[(int) filelength];
-        try {
-            FileInputStream in = new FileInputStream(file);
-            in.read(filecontent);
-            in.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            return new String(filecontent, encoding);
-        } catch (UnsupportedEncodingException e) {
-            System.err.println("The OS does not support " + encoding);
-            e.printStackTrace();
-            return null;
-        }
-    }
 }

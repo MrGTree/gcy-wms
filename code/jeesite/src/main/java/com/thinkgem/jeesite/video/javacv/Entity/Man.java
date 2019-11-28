@@ -1,4 +1,4 @@
-package com.thinkgem.jeesite.video.javacv;
+package com.thinkgem.jeesite.video.javacv.Entity;
 
 import com.thinkgem.jeesite.common.config.Global;
 

@@ -1,5 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,4 +1,4 @@
-package com.thinkgem.jeesite.video.javacv;
+package com.thinkgem.jeesite.video.javacv.Entity;
 
 import java.io.Serializable;
 import java.util.Set;

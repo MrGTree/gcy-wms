@@ -34,6 +34,7 @@ public class WsHandler extends TextWebSocketHandler {
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
         //收到消息后的操作
+        logger.error("{}send message -->{}" ,session,message);
         super.handleMessage(session, message);
     }
 
@@ -63,7 +64,7 @@ public class WsHandler extends TextWebSocketHandler {
                     user.sendMessage(message);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("send message error",e);
             }
         }
 
