@@ -30,7 +30,7 @@ public class VideoAnalizyHandler implements Runnable {
         String threadName = Thread.currentThread().getName();
         logger.debug(threadName + " monitor start update");
         try {
-            new ConvertVideoPakcet().from(urlMapper.getInputUrl()).go();
+            new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).go();
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:" + e.getMessage(), e);
         }

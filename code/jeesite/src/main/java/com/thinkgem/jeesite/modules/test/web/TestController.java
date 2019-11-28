@@ -96,7 +96,7 @@ public class TestController extends BaseController {
     @ResponseBody
     public String startAnalizy(UrlMapper urlMapper) {
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
-        if (urlMapper != null){
+        if (urlMapper != null && StringUtils.isNotEmpty(urlMapper.getInputUrl())){
             urlMappers.add(urlMapper);
         }
         if (CollectionUtils.isNotEmpty(urlMappers)) {

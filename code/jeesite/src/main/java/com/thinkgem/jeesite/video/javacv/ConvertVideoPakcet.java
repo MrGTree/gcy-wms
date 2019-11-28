@@ -9,6 +9,8 @@ import com.sensetime.ad.sdk.StImageFormat;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
+import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
@@ -38,23 +40,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
+import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
 import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
 import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
 import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
+import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
 import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
+import static org.bytedeco.ffmpeg.global.avutil.av_free;
 import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
 import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
 import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
 import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
+import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 
@@ -158,18 +167,54 @@ public class ConvertVideoPakcet {
         if (audioBitrate < 1) {
             audioBitrate = 128 * 1000;// 默认音频比特率
         }
+        initGrabber(src,AV_PIX_FMT_BGR24);
+        return this;
+    }
 
-        pFormatCtx = new AVFormatContext(null);
-        avformat_open_input(pFormatCtx, src, null, null);
-        AVDictionary options = null;
-        avformat_find_stream_info(pFormatCtx, options == null ? (AVDictionary) null : options);
-        videoStreamIndex = findVideoStreamIndex(pFormatCtx);
+    /**
+     * free all struct
+     */
+    private void freeAndClose() {
+        av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
+
+        av_free(pFrame);// Free the YUV frame
+        av_free(outFrameRGB);// Free the RGB image
+
+        sws_freeContext(sws_ctx);//Free SwsContext
+        avcodec_close(pCodecCtx);// Close the codec
+        avformat_close_input(pFormatCtx);// Close the video file
+    }
+
+    /**
+     * 开始转码之前的一些初始化操作
+     * @param url
+     * @param fmt
+     * @return
+     */
+    private boolean initGrabber(String url,int fmt) {
+
+        // Open video file
+        pFormatCtx=openInput(url);
+
+        // Find video info
+        findStreamInfo(pFormatCtx,null);
+
+        // Find a video stream
+        videoStreamIndex=findVideoStreamIndex(pFormatCtx);
 
         // Find the decoder for the video stream
-        pCodecCtx = findAndOpenCodec(pFormatCtx, videoStreamIndex);
+        pCodecCtx= findAndOpenCodec(pFormatCtx,videoStreamIndex);
 
-        DoublePointer param = null;
-        sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height, 0, SWS_FAST_BILINEAR, null, null, param);
+        //set image size
+        width = pCodecCtx.width();
+        height = pCodecCtx.height();
+
+
+        //scaling/conversion operations by using sws_scale().
+        DoublePointer param=null;
+        sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height,fmt, SWS_FAST_BILINEAR, null, null, param);
+
+        packet = new AVPacket();
 
         // Allocate video frame
         pFrame = av_frame_alloc();
@@ -178,28 +223,51 @@ public class ConvertVideoPakcet {
         outFrameRGB = av_frame_alloc();
         outFrameRGB.width(width);
         outFrameRGB.height(height);
-        outFrameRGB.format(0);
+        outFrameRGB.format(fmt);
 
+        return true;
+    }
 
-        return this;
+    /**
+     * 打开视频流
+     * @param url -url
+     * @return
+     * @throws
+     */
+    protected AVFormatContext openInput(String url) throws FileNotOpenException {
+        AVFormatContext pFormatCtx = new AVFormatContext(null);
+        if(avformat_open_input(pFormatCtx, url, null, null)==0) {
+            return pFormatCtx;
+        }
+        throw new FileNotOpenException("Didn't open video file");
     }
 
     /**
      * 查找视频通道
-     *
      * @return
      */
     protected int findVideoStreamIndex(AVFormatContext formatCtx) {
-        int size = formatCtx.nb_streams();
+        int size=formatCtx.nb_streams();
         for (int i = 0; i < size; i++) {
-            AVStream stream = formatCtx.streams(i);
-            AVCodecParameters codec = stream.codecpar();
-            int type = codec.codec_type();
+            AVStream stream=formatCtx.streams(i);
+            AVCodecParameters codec=stream.codecpar();
+            int type=codec.codec_type();
             if (type == AVMEDIA_TYPE_VIDEO) {
                 return i;
             }
         }
         return -1;
+    }
+
+    /**
+     * 检索流信息（rtsp/rtmp检索时间过长问题解决）
+     * @return
+     */
+    protected AVFormatContext findStreamInfo(AVFormatContext formatCtx,AVDictionary options) throws StreamInfoNotFoundException {
+        if (avformat_find_stream_info(formatCtx, options==null?(AVDictionary)null:options)>= 0) {
+            return formatCtx;
+        }
+        throw new StreamInfoNotFoundException("Didn't retrieve stream information");
     }
 
     /**
@@ -304,10 +372,10 @@ public class ConvertVideoPakcet {
         urlMappers.remove(urlMapper);
 
         // Determine required buffer size and allocate buffer
-        BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(0, width, height, 1)));
+        BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
 
         // Assign appropriate parts of buffer to image planes in pFrameRGB.
-        av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, 0, width, height, 1);
+        av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
 
         //分析时违规记录
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
@@ -325,7 +393,7 @@ public class ConvertVideoPakcet {
                     no_frame_index++;
                     continue;
                 }
-
+                logger.error("closeRelationMap---------->{}",closeRelationMap);
                 if (pkt.stream_index() == videoStreamIndex) {
                     //把需要解码的视频帧送进解码器
                     //Send video packet to be decoding
@@ -391,7 +459,7 @@ public class ConvertVideoPakcet {
                                                         int time = closeManOn.getTime();
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
-                                                            new ConvertVideoPakcet().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
+                                                            new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}",manOut,manIn,time +1 ,distance);
                                                             RuleBreak ruleBreak = new RuleBreak(manOut, manIn, urlMapper.getCamerName());
                                                             ObjectMapper objectMapper = new ObjectMapper();
@@ -472,8 +540,10 @@ public class ConvertVideoPakcet {
                 }
             } catch (Exception e) {
                 err_index++;
+                logger.error("analizy video error" + e);
             } catch (IOException e) {
                 err_index++;
+                logger.error("analizy video error" + e);
             }
             //获取单个视频帧结束
             long endTime = System.currentTimeMillis();
@@ -517,6 +587,7 @@ public class ConvertVideoPakcet {
                     record.release();
                     grabber.stop();
                     grabber.release();
+                    freeAndClose();
                     logger.info("record pushVideo end");
                     return this;
                 }
