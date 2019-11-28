@@ -8,6 +8,7 @@ import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StImageFormat;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
@@ -393,9 +394,9 @@ public class ConvertVideoPakcet {
                     no_frame_index++;
                     continue;
                 }
-                logger.error("closeRelationMap---------->{}",closeRelationMap);
                 if (pkt.stream_index() == videoStreamIndex) {
                     //把需要解码的视频帧送进解码器
+                    logger.error("closeRelationMap---------->{}",closeRelationMap);
                     //Send video packet to be decoding
                     if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                         //Receive decoded video frame
@@ -410,7 +411,7 @@ public class ConvertVideoPakcet {
                             //获取分析这一视频帧图片
                             StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
-                            logger.info("track success---->{}",crowdResult);
+                            logger.info("track success---->{}", JsonMapper.getInstance().toJson(crowdResult));
                             //大与两个人
                             if (crowdResult != null && 2 < crowdResult.getNumberOfPeople()) {
                                 StPointF[] keypoints = crowdResult.getKeypoints();
