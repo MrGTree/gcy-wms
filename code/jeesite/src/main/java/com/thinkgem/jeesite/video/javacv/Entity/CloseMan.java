@@ -61,4 +61,13 @@ public class CloseMan implements Serializable {
     public int hashCode() {
         return Objects.hash(time, man, currentInc);
     }
+
+    @Override
+    public String toString() {
+        return "CloseMan{" +
+                "time=" + time +
+                ", man=" + man +
+                ", currentInc=" + currentInc +
+                '}';
+    }
 }

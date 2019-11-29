@@ -28,6 +28,14 @@ public class CloseRelation implements Serializable {
         return closeManSet;
     }
 
+    @Override
+    public String toString() {
+        return "CloseRelation{" +
+                "manOut=" + manOut +
+                ", closeManSet=" + closeManSet +
+                '}';
+    }
+
     public void setCloseManSet(Set<CloseMan> closeManSet) {
         this.closeManSet = closeManSet;
     }
