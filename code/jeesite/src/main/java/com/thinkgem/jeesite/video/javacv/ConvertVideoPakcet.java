@@ -157,7 +157,7 @@ public class ConvertVideoPakcet {
         }
         // 视频参数
         audiocodecid = grabber.getAudioCodec();
-        logger.debug("{}的音频编码：{}", src, audiocodecid);
+        logger.debug("{} audiocodecid is {}", src, audiocodecid);
         codecid = grabber.getVideoCodec();
         framerate = grabber.getVideoFrameRate();// 帧率
         bitrate = grabber.getVideoBitrate();// 比特率
