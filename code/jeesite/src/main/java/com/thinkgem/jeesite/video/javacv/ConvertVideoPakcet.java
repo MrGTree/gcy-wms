@@ -462,11 +462,11 @@ public class ConvertVideoPakcet {
                                                         int time = closeManOn.getTime();
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
-                                                            new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}",manOut,manIn,time +1 ,distance);
                                                             RuleBreak ruleBreak = new RuleBreak(manOut, manIn, urlMapper.getCamerName());
                                                             ObjectMapper objectMapper = new ObjectMapper();
                                                             SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(objectMapper.writeValueAsString(ruleBreak)));
+                                                            new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
                                                             //清空map
                                                             closeRelationMap.clear();
                                                             break manLoop;
