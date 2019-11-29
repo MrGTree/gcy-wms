@@ -2,21 +2,20 @@ package com.thinkgem.jeesite.video.javacv.test;
 
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
-import com.sensetime.ad.sdk.*;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.sensetime.ad.sdk.StLibrary;
+import com.sensetime.ad.sdk.StPointF;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
 
-import java.io.*;
-
-import static org.opencv.core.Core.addWeighted;
-import static org.opencv.core.CvType.CV_32F;
-import static org.opencv.core.CvType.CV_8UC3;
-import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
-import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 public class SDK_test {
     static {
@@ -26,41 +25,6 @@ public class SDK_test {
     private static final String MODEL_PATH = "./models/M_Crowd_Keypoint_1.0.0.model";
     private static final String RESULT_PATH = "./test.jpg";
 
-    private static Mat visualize_dmap(Mat ori_img,
-                                      StCrowdDensityResult crowd_result) {
-        Mat dmap = new Mat(crowd_result.getHeight(), crowd_result.getWidth(), CV_32F);
-        dmap.put(0, 0, crowd_result.getDensityMap());
-        // normalize dmap
-        Core.MinMaxLocResult minMaxLoc =  Core.minMaxLoc(dmap);
-        dmap = dmap.mul(dmap, 1 / minMaxLoc.maxVal);
-        dmap.convertTo(dmap, CV_8UC3, 255);
-        // gen color map and resize
-        Mat color_dmap = new Mat();
-        Imgproc.applyColorMap(dmap, color_dmap, COLORMAP_JET);
-        Imgproc.resize(color_dmap, color_dmap, ori_img.size());
-        // add weight for visualize
-        Mat vis_dmap = new Mat(ori_img.rows(), ori_img.cols(), ori_img.type());
-        Mat base_img = ori_img.clone();
-
-        float alpha = 0.5f;
-        addWeighted(color_dmap, alpha, base_img, 1 - alpha, 0, vis_dmap);
-
-        // draw keypoint
-        StPointF[] pts = crowd_result.getKeypoints();
-        Scalar color = new Scalar(255, 255, 255);
-        for (int i = 0; i < crowd_result.getKeypointCount(); ++i) {
-            Imgproc.circle(
-                    vis_dmap,
-                    new Point(pts[i].x, pts[i].y),
-                    3, color, -1);
-
-            Imgproc.putText(vis_dmap, String.format("%.2f", crowd_result.getPointsScore()[i]),
-                    new Point(pts[i].x, pts[i].y - 5),
-                    FONT_HERSHEY_SIMPLEX, 1, new Scalar(255, 0, 0),
-                    2, 8, false);
-        }
-        return vis_dmap;
-    }
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -111,7 +75,7 @@ public class SDK_test {
                 System.out.println(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
             }
 
-            Mat colorMat = visualize_dmap(mat, crowdResult);
+            Mat colorMat = VideoAnalizyUtils.visualize_dmap(mat, crowdResult);
             Imgcodecs.imwrite(RESULT_PATH, colorMat);
         } catch (StFaceException e) {
             e.printStackTrace();

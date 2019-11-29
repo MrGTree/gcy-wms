@@ -168,7 +168,7 @@ public class ConvertVideoPakcet {
         if (audioBitrate < 1) {
             audioBitrate = 128 * 1000;// 默认音频比特率
         }
-        initGrabber(src,AV_PIX_FMT_BGR24);
+        initGrabber(src, AV_PIX_FMT_BGR24);
         return this;
     }
 
@@ -188,23 +188,24 @@ public class ConvertVideoPakcet {
 
     /**
      * 开始转码之前的一些初始化操作
+     *
      * @param url
      * @param fmt
      * @return
      */
-    private boolean initGrabber(String url,int fmt) {
+    private boolean initGrabber(String url, int fmt) {
 
         // Open video file
-        pFormatCtx=openInput(url);
+        pFormatCtx = openInput(url);
 
         // Find video info
-        findStreamInfo(pFormatCtx,null);
+        findStreamInfo(pFormatCtx, null);
 
         // Find a video stream
-        videoStreamIndex=findVideoStreamIndex(pFormatCtx);
+        videoStreamIndex = findVideoStreamIndex(pFormatCtx);
 
         // Find the decoder for the video stream
-        pCodecCtx= findAndOpenCodec(pFormatCtx,videoStreamIndex);
+        pCodecCtx = findAndOpenCodec(pFormatCtx, videoStreamIndex);
 
         //set image size
         width = pCodecCtx.width();
@@ -212,8 +213,8 @@ public class ConvertVideoPakcet {
 
 
         //scaling/conversion operations by using sws_scale().
-        DoublePointer param=null;
-        sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height,fmt, SWS_FAST_BILINEAR, null, null, param);
+        DoublePointer param = null;
+        sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height, fmt, SWS_FAST_BILINEAR, null, null, param);
 
         packet = new AVPacket();
 
@@ -231,13 +232,14 @@ public class ConvertVideoPakcet {
 
     /**
      * 打开视频流
+     *
      * @param url -url
      * @return
      * @throws
      */
     protected AVFormatContext openInput(String url) throws FileNotOpenException {
         AVFormatContext pFormatCtx = new AVFormatContext(null);
-        if(avformat_open_input(pFormatCtx, url, null, null)==0) {
+        if (avformat_open_input(pFormatCtx, url, null, null) == 0) {
             return pFormatCtx;
         }
         throw new FileNotOpenException("Didn't open video file");
@@ -245,14 +247,15 @@ public class ConvertVideoPakcet {
 
     /**
      * 查找视频通道
+     *
      * @return
      */
     protected int findVideoStreamIndex(AVFormatContext formatCtx) {
-        int size=formatCtx.nb_streams();
+        int size = formatCtx.nb_streams();
         for (int i = 0; i < size; i++) {
-            AVStream stream=formatCtx.streams(i);
-            AVCodecParameters codec=stream.codecpar();
-            int type=codec.codec_type();
+            AVStream stream = formatCtx.streams(i);
+            AVCodecParameters codec = stream.codecpar();
+            int type = codec.codec_type();
             if (type == AVMEDIA_TYPE_VIDEO) {
                 return i;
             }
@@ -262,10 +265,11 @@ public class ConvertVideoPakcet {
 
     /**
      * 检索流信息（rtsp/rtmp检索时间过长问题解决）
+     *
      * @return
      */
-    protected AVFormatContext findStreamInfo(AVFormatContext formatCtx,AVDictionary options) throws StreamInfoNotFoundException {
-        if (avformat_find_stream_info(formatCtx, options==null?(AVDictionary)null:options)>= 0) {
+    protected AVFormatContext findStreamInfo(AVFormatContext formatCtx, AVDictionary options) throws StreamInfoNotFoundException {
+        if (avformat_find_stream_info(formatCtx, options == null ? (AVDictionary) null : options) >= 0) {
             return formatCtx;
         }
         throw new StreamInfoNotFoundException("Didn't retrieve stream information");
@@ -391,12 +395,13 @@ public class ConvertVideoPakcet {
                 pkt = grabber.grabPacket();
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
                     //空包记录次数跳过
+                    logger.error("no_frame !!! -->{}", no_frame_index);
                     no_frame_index++;
                     continue;
                 }
                 if (pkt.stream_index() == videoStreamIndex) {
                     //把需要解码的视频帧送进解码器
-                    logger.error("closeRelationMap---------->{}",closeRelationMap);
+                    logger.error("closeRelationMap---------->{}", closeRelationMap);
                     //Send video packet to be decoding
                     if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                         //Receive decoded video frame
@@ -411,9 +416,9 @@ public class ConvertVideoPakcet {
                             //获取分析这一视频帧图片
                             StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
-                            logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(),crowdResult.getHeight(),crowdResult.getNumberOfPeople(),crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
+                            logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
                             //大与两个人
-                            if (crowdResult != null && 2 < crowdResult.getNumberOfPeople()) {
+                            if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
                                 StPointF[] keypoints = crowdResult.getKeypoints();
                                 //初始化有效的manList
                                 ArrayList<Man> manList = new ArrayList<>();
@@ -458,11 +463,10 @@ public class ConvertVideoPakcet {
                                                         closeManSet.add(closeMan);
                                                         continue;
                                                     } else {
-                                                        Man man = closeManOn.getMan();
                                                         int time = closeManOn.getTime();
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
-                                                            logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}",manOut,manIn,time +1 ,distance);
+                                                            logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
                                                             RuleBreak ruleBreak = new RuleBreak(manOut, manIn, urlMapper.getCamerName());
                                                             ObjectMapper objectMapper = new ObjectMapper();
                                                             SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(objectMapper.writeValueAsString(ruleBreak)));
@@ -512,6 +516,7 @@ public class ConvertVideoPakcet {
                                                         continue;
                                                     } else {
                                                         closeManSet.remove(closeMan);
+                                                        continue;
                                                     }
                                                 }
 
@@ -559,6 +564,8 @@ public class ConvertVideoPakcet {
         if (detector != null) {
             detector.release();
         }
+
+        logger.info("{}go loop finish !!!", urlMapper.getInputUrl());
         return this;
     }
 
