@@ -344,6 +344,7 @@ public class ConvertVideoPakcet {
 
         //for循环获取视频帧
         for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
+            logger.info("analizy one second start ");
             //获取分析开始，总时间需要一秒
             long startTime = System.currentTimeMillis();
             AVPacket pkt = null;
@@ -504,11 +505,12 @@ public class ConvertVideoPakcet {
                 }
             } catch (Exception e) {
                 err_index++;
-                logger.error("analizy video error" + e);
+                logger.error("analizy video error :" + e);
             } catch (IOException e) {
                 err_index++;
-                logger.error("analizy video error" + e);
+                logger.error("analizy video error :" + e);
             }
+            logger.info("analizy one second end ");
             //获取单个视频帧结束
             long endTime = System.currentTimeMillis();
             long timeSleep = 1000 - (endTime - startTime);

@@ -2,12 +2,16 @@ package com.thinkgem.jeesite.video.javacv;
 
 import java.io.IOException;
 
+import static org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_AAC;
+import static org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264;
 import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
 import com.thinkgem.jeesite.common.config.Global;
 import org.bytedeco.ffmpeg.avcodec.AVPacket;
 import org.bytedeco.ffmpeg.avformat.AVFormatContext;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.FrameRecorder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +20,7 @@ public class PushBreakRuleVideo {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     FFmpegFrameGrabber grabber = null;
-    FFmpegFrameRecorderPlus record = null;
+    FFmpegFrameRecorder record = null;
     int width = -1, height = -1;
     int i = 1;
 
@@ -44,9 +48,10 @@ public class PushBreakRuleVideo {
         // 采集/抓取器
         logger.info("PushBreakRuleVideo  grabber go go go ");
         grabber = new FFmpegFrameGrabber(src);
-//        if (src.indexOf("rtsp") >= 0) {
-        grabber.setOption("rtsp_transport", "tcp");
-//        }
+        if (hasRTSP(src)) {
+            grabber.setOption("rtsp_transport", "tcp");
+        }
+//        grabber.setOption("buffer_size", "1024000");
         grabber.start();// 开始之后ffmpeg会采集视频信息，之后就可以获取音视频信息
         if (width < 0 || height < 0) {
             width = grabber.getImageWidth();
@@ -77,8 +82,10 @@ public class PushBreakRuleVideo {
     public PushBreakRuleVideo to(String out) throws IOException {
         // 录制/推流器
         logger.info("PushBreakRuleVideo record go go go ");
-        record = new FFmpegFrameRecorderPlus(out, width, height);
+        record = new FFmpegFrameRecorder(out, width, height);
         record.setVideoOption("crf", "18");
+//        record.setVideoOption("tune", "zerolatency");
+//        record.setVideoOption("preset", "ultrafast");
         record.setGopSize(2);
         record.setFrameRate(framerate);
         record.setVideoBitrate(bitrate);
@@ -87,15 +94,50 @@ public class PushBreakRuleVideo {
         record.setAudioBitrate(audioBitrate);
         record.setSampleRate(sampleRate);
         AVFormatContext fc = null;
-        if (out.indexOf("rtmp") >= 0 || out.indexOf("flv") > 0) {
-            // 封装格式flv
+        //rtmp和flv
+        if (hasRTMPFLV(out)) {
+            // 封装格式flv，并使用h264和aac编码
             record.setFormat("flv");
-            record.setAudioCodecName("aac");
-            record.setVideoCodec(codecid);
-            fc = grabber.getFormatContext();
+            record.setVideoCodec(AV_CODEC_ID_H264);
+            record.setAudioCodec(AV_CODEC_ID_AAC);
+            if (hasRTMPFLV(out)) {
+                fc = grabber.getFormatContext();
+            }
+        } else if (hasMP4(out)) {//MP4
+            record.setFormat("mp4");
+            record.setVideoCodec(AV_CODEC_ID_H264);
+            record.setAudioCodec(AV_CODEC_ID_AAC);
         }
         record.start(fc);
         return this;
+    }
+
+    public void releaseAll() throws FrameRecorder.Exception, FrameGrabber.Exception {
+        record.stop();
+        record.release();
+        grabber.stop();
+        grabber.release();
+    }
+
+    /*
+     * 是否包含rtmp或flv
+     */
+    private boolean hasRTMPFLV(String str) {
+        return str.indexOf("rtmp") > -1 || str.indexOf("flv") > 0;
+    }
+
+    /*
+     * 是否包含mp4
+     */
+    private boolean hasMP4(String str) {
+        return str.indexOf("mp4") > 0;
+    }
+
+    /*
+     * 是否包含rtsp
+     */
+    private boolean hasRTSP(String str) {
+        return str.indexOf("rtsp") > -1;
     }
 
     /**
@@ -106,54 +148,42 @@ public class PushBreakRuleVideo {
      */
     public PushBreakRuleVideo go() throws IOException {
         logger.info("PushBreakRuleVideo AVPacket go go go");
-        long err_index = 0;//采集或推流导致的错误次数
-
-        long startTime = System.currentTimeMillis();
-        long endTime;
-        //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
-        for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
+        long err_index = 0;// 采集或推流失败次数
+        long now = System.currentTimeMillis();
+        long starttime = now;
+        long duration = 1000 * Global.getPushVideoLong();
+        for (; (now - starttime) <= duration; now = System.currentTimeMillis()) {
             AVPacket pkt = null;
             try {
                 //没有解码的音视频帧
                 pkt = grabber.grabPacket();
-                if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
-                    //空包记录次数跳过
-                    no_frame_index++;
+                if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {// 采集空包结束
+                    if (err_index > 3) {// 超过三次则终止录制
+                        break;
+                    }
+                    err_index++;
                     continue;
                 }
-                //不需要编码直接把音视频帧推出去
-                err_index += (record.recordPacket(pkt) ? 0 : 1);//如果失败err_index自增1
-                av_free_packet(pkt);
-                endTime = System.currentTimeMillis();
-                if ((endTime - startTime) > 1000 * Global.getPushVideoLong()) {
-                    record.stop();
-                    record.release();
-                    grabber.stop();
-                    grabber.release();
-                    logger.info("record pushVideo go go go end");
-                    return this;
-                }
-            } catch (FrameGrabber.Exception e) {//推流失败
-                err_index++;
-                record.stop();
-                record.release();
-                grabber.stop();
-                grabber.release();
-                logger.error("PushBreakRuleVideo go error",e);
+                record.recordPacket(pkt);
+            } catch (FrameGrabber.Exception e) {// 推流失败
+                releaseAll();
+                logger.error("PushBreakRuleVideo go error", e);
+                throw e;
             } catch (IOException e) {
-                err_index++;
-                record.stop();
-                record.release();
-                grabber.stop();
-                grabber.release();
-                logger.error("PushBreakRuleVideo go error",e);
+                releaseAll();
+                logger.error("PushBreakRuleVideo go error", e);
+                throw e;
+            } finally {
+                av_free_packet(pkt);
             }
         }
+        releaseAll();
+        logger.info("record pushVideo go go go end");
         return this;
     }
 
-    public static void main(String[] args) throws IOException {
-        new PushBreakRuleVideo().from("rtmp://112.74.62.129:1935/normal/classroom01-camera06").to("rtmp://112.74.62.129:11935/violation-rule?vhost=violation-rule-record/classroom01-camera06").go();
-    }
+//    public static void main(String[] args) throws IOException {
+//        new PushBreakRuleVideo().from("rtmp://112.74.62.129:1935/normal/classroom01-camera06").to("rtmp://112.74.62.129:11935/violation-rule?vhost=violation-rule-record/classroom01-camera17").go();
+//    }
 
 }

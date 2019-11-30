@@ -6,6 +6,19 @@
  */
 package com.thinkgem.jeesite.video.javacv.test;
 
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacv.CanvasFrame;
@@ -24,19 +37,6 @@ import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Point;
 import org.bytedeco.opencv.opencv_core.Scalar;
 import org.junit.Test;
-
-import javax.imageio.ImageIO;
-import javax.swing.JFrame;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 /**
  * 调用本地摄像头窗口视频
@@ -64,8 +64,8 @@ public class JavavcCameraTest {
 //            Thread.sleep(50);//50毫秒刷新一次图像
 //        }
 
-        String a = "rtmp://www.fourhu.xyz:1935/live/livestream";
-        String b = "rtmp://www.fourhu.xyz/violation-rule?vhost=violation-rule-record/classroom01-camera01";///mnt/software/srs-2.0-r6/trunk/objs/nginx/html/violation-rule
+        String a = "rtmp://112.74.62.129:1935/normal/classroom01-camera06";
+        String b = "rtmp://112.74.62.129:1935/normal/classroom01-camera17";///mnt/software/srs-2.0-r6/trunk/objs/nginx/html/violation-rule
         recordPush(a,b,25);
     }
 
@@ -355,7 +355,7 @@ public class JavavcCameraTest {
         Mat mat = null;
 
         while (frame.isVisible() && (grabframe=grabber.grab()) != null) {
-            System.out.println("推流...");
+//            System.out.println("推流...");
             Java2DFrameConverter javaconverter=new Java2DFrameConverter();
             BufferedImage buffImg=javaconverter.convert(grabframe);
             mat = converter.convertToMat(grabframe);
