@@ -10,14 +10,14 @@ import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * 项目启动时就开启线程分析视频是否违规
@@ -26,6 +26,9 @@ import java.util.concurrent.Executors;
 public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRefreshedEvent> {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
+
+    @Autowired
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
@@ -49,17 +52,10 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
             Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
             if (CollectionUtils.isNotEmpty(urlMappers)) {
 
-                // 允许创建程数
-                int nThreads = 16;
-                // 定义固定数量线程池
-                ExecutorService pool = Executors.newFixedThreadPool(urlMappers.size());
-
                 // 每个用一个线程处理
                 for (UrlMapper urlMapper : urlMappers) {
-                    pool.execute(new VideoAnalizyHandler(urlMapper));
+                    threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapper));
                 }
-
-                pool.shutdown();
 
             }
 

@@ -8,6 +8,8 @@ import java.io.Serializable;
  */
 public class RuleBreak implements Serializable {
 
+    private int width;
+    private  int height;
     private Man manOut;
     private Man manIn;
     private String camerName;
@@ -45,10 +47,36 @@ public class RuleBreak implements Serializable {
         this.camerName = camerName;
     }
 
+    public RuleBreak(int width, int height, Man manOut, Man manIn, String camerName) {
+        this.width = width;
+        this.height = height;
+        this.manOut = manOut;
+        this.manIn = manIn;
+        this.camerName = camerName;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
     @Override
     public String toString() {
         return "RuleBreak{" +
-                "manOut=" + manOut +
+                "width=" + width +
+                ", height=" + height +
+                ", manOut=" + manOut +
                 ", manIn=" + manIn +
                 ", camerName='" + camerName + '\'' +
                 '}';

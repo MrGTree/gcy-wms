@@ -30,9 +30,9 @@
 		<div class="control-group">
 			<label class="control-label">需要分析的视频:</label>
 			<div class="controls">
-				<input name="inputUrl" class="required"/>
-				<input name="outPutUrl" class="required"/>
-				<input name="camerName" class="required"/>
+				分析地址:<input name="inputUrl" class="required"/>
+				违规推送:<input name="outPutUrl" class="required"/>
+				客户端号:<input name="camerName" class="required"/>
 			</div>
 		</div>
 		<div class="form-actions">

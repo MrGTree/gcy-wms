@@ -1,6 +1,36 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
+import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
+import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
+import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
+import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
+import static org.bytedeco.ffmpeg.global.avutil.av_free;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
+import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
+import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
+import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
@@ -37,37 +67,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
-import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
-import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
-import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
-import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
-import static org.bytedeco.ffmpeg.global.avutil.av_free;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
-import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
-import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
-import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
-
 /**
  *  * rtsp转rtmp（转封装方式）
  *  * @author eguid
@@ -89,13 +88,8 @@ public class ConvertVideoPakcet {
     protected int bitrate;// 比特率
 
     private UrlMapper urlMapper;
-
-    private Long pushVideoLong;
-
     private Float useScore;
-
     private Float tooCloseValue;
-
     public ConvertVideoPakcet() {
     }
 
@@ -108,7 +102,6 @@ public class ConvertVideoPakcet {
     private int audioChannels;
     private int audioBitrate;
     private int sampleRate;
-
     private String modelPath;
 
 
@@ -117,7 +110,6 @@ public class ConvertVideoPakcet {
     {
         modelPath = Global.getModelPath();
         tooCloseValue = Global.getTooCloseValue();
-        pushVideoLong = Global.getPushVideoLong();
         useScore = Global.getUseScore();
         try {
             detector = new StCrowdDensityDetector(modelPath);
@@ -141,8 +133,6 @@ public class ConvertVideoPakcet {
      *   * @throws Exception
      *  
      */
-
-
     public ConvertVideoPakcet from(String src) throws Exception {
         logger.debug("monitor from url:{}" + src);
         // 采集/抓取器
@@ -157,7 +147,7 @@ public class ConvertVideoPakcet {
         }
         // 视频参数
         audiocodecid = grabber.getAudioCodec();
-        logger.debug("{} audiocodecid is {}", src, audiocodecid);
+        logger.debug("{} audiocodecid is {},width is {},heigth is {}", src, audiocodecid,width,height);
         codecid = grabber.getVideoCodec();
         framerate = grabber.getVideoFrameRate();// 帧率
         bitrate = grabber.getVideoBitrate();// 比特率
@@ -327,39 +317,6 @@ public class ConvertVideoPakcet {
     }
 
     /**
-     *   * 选择输出
-     *   * @param out
-     *   * @author eguid
-     *   * @throws IOException
-     *  
-     */
-
-    public ConvertVideoPakcet to(String out) throws IOException {
-        // 录制/推流器
-        logger.debug("monitor push video start--->{}", out);
-        record = new FFmpegFrameRecorder(out, width, height);
-        record.setVideoOption("crf", "18");
-        record.setGopSize(2);
-        record.setFrameRate(framerate);
-        record.setVideoBitrate(bitrate);
-
-        record.setAudioChannels(audioChannels);
-        record.setAudioBitrate(audioBitrate);
-        record.setSampleRate(sampleRate);
-        AVFormatContext fc = null;
-        if (out.indexOf("rtmp") >= 0 || out.indexOf("flv") > 0) {
-            // 封装格式flv
-            record.setFormat("mp4");
-            record.setAudioCodecName("aac");
-            record.setVideoCodec(codecid);
-            fc = grabber.getFormatContext();
-        }
-        record.start(fc);
-        logger.debug("record.start");
-        return this;
-    }
-
-    /**
      *   * 转封装
      *   * @author eguid
      *   * @throws IOException
@@ -395,7 +352,6 @@ public class ConvertVideoPakcet {
                 pkt = grabber.grabPacket();
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
                     //空包记录次数跳过
-                    logger.error("no_frame !!! -->{}", no_frame_index);
                     no_frame_index++;
                     continue;
                 }
@@ -467,10 +423,10 @@ public class ConvertVideoPakcet {
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
-                                                            RuleBreak ruleBreak = new RuleBreak(manOut, manIn, urlMapper.getCamerName());
+                                                            RuleBreak ruleBreak = new RuleBreak(width,height,manOut, manIn, urlMapper.getCamerName());
                                                             ObjectMapper objectMapper = new ObjectMapper();
                                                             SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(objectMapper.writeValueAsString(ruleBreak)));
-                                                            new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).pushVideo();
+                                                            new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
                                                             //清空map
                                                             closeRelationMap.clear();
                                                             break manLoop;
@@ -566,49 +522,6 @@ public class ConvertVideoPakcet {
         }
 
         logger.info("{}go loop finish !!!", urlMapper.getInputUrl());
-        return this;
-    }
-
-
-    public ConvertVideoPakcet pushVideo() throws IOException {
-        long err_index = 0;//采集或推流导致的错误次数
-        //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
-
-        logger.info("record pushVideo start");
-
-        long startTime = System.currentTimeMillis();
-        long endTime;
-        for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
-            AVPacket pkt = null;
-            try {
-                //没有解码的音视频帧
-                pkt = grabber.grabPacket();
-                if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
-                    //空包记录次数跳过
-                    no_frame_index++;
-                    continue;
-                }
-
-                err_index += (record.recordPacket(pkt) ? 0 : 1);//如果失败err_index自增1
-                av_free_packet(pkt);
-                endTime = System.currentTimeMillis();
-                if ((endTime - startTime) > 1000 * pushVideoLong) {
-                    record.stop();
-                    record.release();
-                    grabber.stop();
-                    grabber.release();
-                    freeAndClose();
-                    logger.info("record pushVideo end");
-                    return this;
-                }
-            } catch (Exception e) {//推流失败
-                err_index++;
-                logger.error("pushVideo fail " + e);
-            } catch (IOException e) {
-                err_index++;
-                logger.error("pushVideo fail " + e);
-            }
-        }
         return this;
     }
 

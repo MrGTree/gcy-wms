@@ -3,6 +3,14 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
@@ -17,22 +25,12 @@ import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.socket.TextMessage;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 
 /**
  * 测试Controller
@@ -46,6 +44,8 @@ public class TestController extends BaseController {
 
     @Autowired
     private WsHandler wsHandler;
+    @Autowired
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     /**
      * 测试通知请求
@@ -57,7 +57,7 @@ public class TestController extends BaseController {
     @RequestMapping(value = "websocket")
     @ResponseBody
     public String websocket() throws JsonProcessingException {
-        RuleBreak ruleBreak = new RuleBreak(new Man(100, 100), new Man(200, 200), "1");
+        RuleBreak ruleBreak = new RuleBreak(1920,1080,new Man(100, 100), new Man(200, 200), "1");
         ObjectMapper objectMapper = new ObjectMapper();
         String s = objectMapper.writeValueAsString(ruleBreak);
         SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(s));
@@ -100,13 +100,10 @@ public class TestController extends BaseController {
             urlMappers.add(urlMapper);
         }
         if (CollectionUtils.isNotEmpty(urlMappers)) {
-            // 定义固定数量线程池
-            ExecutorService pool = Executors.newFixedThreadPool(urlMappers.size());
             // 每个用一个线程处理
             for (UrlMapper urlMapperPush : urlMappers) {
-                pool.execute(new VideoAnalizyHandler(urlMapperPush));
+                threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapperPush));
             }
-            pool.shutdown();
             return "push ok";
         }
 
