@@ -1,5 +1,8 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import java.util.Set;
+
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +37,8 @@ public class VideoAnalizyHandler implements Runnable {
             new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).go();
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:" + e.getMessage(), e);
+            Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+            urlMappers.add(urlMapper);
         }
         return;
     }
