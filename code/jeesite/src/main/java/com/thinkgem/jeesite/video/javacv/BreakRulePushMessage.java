@@ -4,13 +4,19 @@ import java.util.Date;
 
 import static com.thinkgem.jeesite.common.config.Global.MESSAGE_TYPE_1;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
 import com.thinkgem.jeesite.common.utils.DateUtils;
+import com.thinkgem.jeesite.common.utils.IdGen;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.MessageSend;
 import com.thinkgem.jeesite.video.javacv.Entity.RuleBreak;
 import com.thinkgem.jeesite.websocket.WsHandler;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
@@ -47,28 +53,34 @@ public class BreakRulePushMessage implements Runnable {
     public void run() {
 
         String threadName = Thread.currentThread().getName();
-        logger.debug("{} BreakRulePushMessage start ", threadName);
-
-        //保存图片
-//            Mat image1 = new Mat(crowdResult.getWidth(),crowdResult.getHeight(), CvType.CV_8UC1);
-//            image1.put(0,0,bytes);
-//
-//            Mat colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
-//
-//            String date = DateUtils.formatDateTime(new Date());
-//            String fileName = camerName + "_" + date + "_" + IdGen.uuid();
-//
-//            logger.debug("{} BreakRulePushMessage save image ",threadName);
-//            Imgcodecs.imwrite(Global.getImagePath() + fileName, colorMat);
-        //推送通知
+        logger.debug("{} BreakRulePushMessage start ,camerName:{}", threadName, camerName);
         Date date = new Date();
-        RuleBreak ruleBreak = new RuleBreak(width, height, manOut, manIn, camerName);
-        MessageSend messageSend = new MessageSend();
-        messageSend.setCurrentTime(DateUtils.formatDateTime(date));
-        messageSend.setMessageType(MESSAGE_TYPE_1);
-        messageSend.setMessageValue(ruleBreak);
-        SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)));
 
-        logger.debug("{} BreakRulePushMessage end ", threadName);
+        try {
+            //保存图片
+            Mat image1 = new Mat(height, width, CvType.CV_8UC3);
+            image1.put(0, 0, bytes);
+            Mat colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
+            String dateStr = DateUtils.formatDateTime(date);
+            String fileName = Global.getImagePath() + camerName + "_" + dateStr + "_" + IdGen.uuid() +".jpg";
+            Imgcodecs.imwrite(fileName, colorMat);
+            logger.info("save image success,camerName:{},fileName:{}",camerName,fileName);
+        } catch (Exception e) {
+            logger.error("{} save image fail:", camerName, e);
+        }
+
+        try {
+            //推送通知
+            RuleBreak ruleBreak = new RuleBreak(width, height, manOut, manIn, camerName);
+            MessageSend messageSend = new MessageSend();
+            messageSend.setCurrentTime(DateUtils.formatDateTime(date));
+            messageSend.setMessageType(MESSAGE_TYPE_1);
+            messageSend.setMessageValue(ruleBreak);
+            SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)));
+        }catch (Exception e){
+            logger.error("{} send message fail:", camerName, e);
+        }
+        logger.debug("{} BreakRulePushMessage end ,camerName:{}", threadName, camerName);
+        return;
     }
 }

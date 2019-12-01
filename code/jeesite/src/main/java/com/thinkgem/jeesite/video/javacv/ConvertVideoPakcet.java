@@ -346,8 +346,9 @@ public class ConvertVideoPakcet {
 
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
         urlMappers.remove(urlMapper);
+        int no_frame_index = 0;
         //for循环获取视频帧
-        for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
+        for (; no_frame_index < 10 || err_index > 1; ) {
             logger.info("analizy one second start ");
             //获取分析开始，总时间需要一秒
             long startTime = System.currentTimeMillis();
@@ -428,7 +429,7 @@ public class ConvertVideoPakcet {
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
-                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(), manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
+                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
                                                             new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
                                                             //清空map
                                                             closeRelationMap.clear();
@@ -525,7 +526,7 @@ public class ConvertVideoPakcet {
             detector.release();
         }
 
-        logger.info("{}go loop finish !!!,err_index:{},no_frame_index{}", urlMapper.getInputUrl());
+        logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(),err_index,no_frame_index);
         freeAndClose();
         urlMappers.add(urlMapper);
         return this;

@@ -35,6 +35,7 @@ public class VideoAnalizyHandler implements Runnable {
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:" + e.getMessage(), e);
         }
+        return;
     }
 }
 

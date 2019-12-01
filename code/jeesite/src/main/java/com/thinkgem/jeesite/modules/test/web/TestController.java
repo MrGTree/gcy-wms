@@ -100,7 +100,7 @@ public class TestController extends BaseController {
             logger.debug(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
         }
 
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(), new Man(1, 2), new Man(2, 4), "123", imageData, crowdResult));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width1[0], height1[0], new Man(1, 2), new Man(2, 4), "123", imageData, crowdResult));
 
         if (detector != null) {
             detector.release();
