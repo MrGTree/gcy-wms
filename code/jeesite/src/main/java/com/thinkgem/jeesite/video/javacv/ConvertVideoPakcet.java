@@ -329,7 +329,7 @@ public class ConvertVideoPakcet {
      */
 
 
-    public ConvertVideoPakcet go() throws StFaceException, InterruptedException {
+    public ConvertVideoPakcet go() {
         long err_index = 0;//采集或推流导致的错误次数
         //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
 
@@ -512,13 +512,21 @@ public class ConvertVideoPakcet {
             } catch (IOException e) {
                 err_index++;
                 logger.error("analizy video error :" + e);
+            } catch (StFaceException e) {
+                err_index++;
+                logger.error("analizy video error :" + e);
             }
             logger.info("analizy one second end ");
             //获取单个视频帧结束
             long endTime = System.currentTimeMillis();
             long timeSleep = 1000 - (endTime - startTime);
-            if (timeSleep > 0) {
-                Thread.sleep(timeSleep);
+            if (timeSleep > 10) {
+                try {
+                    Thread.sleep(timeSleep);
+                } catch (InterruptedException e) {
+                    logger.error("analizy video Thread sleep error :" + e);
+                    Thread.currentThread().interrupt();
+                }
             }
         }
 
