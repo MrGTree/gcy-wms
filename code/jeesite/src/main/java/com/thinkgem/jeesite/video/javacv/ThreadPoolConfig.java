@@ -10,10 +10,10 @@ public class ThreadPoolConfig {
     @Bean
     public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
-        threadPoolTaskExecutor.setCorePoolSize(20);
-        threadPoolTaskExecutor.setMaxPoolSize(40);
-        threadPoolTaskExecutor.setQueueCapacity(1000);
-        threadPoolTaskExecutor.setKeepAliveSeconds(5000);
+        threadPoolTaskExecutor.setCorePoolSize(32);
+        threadPoolTaskExecutor.setMaxPoolSize(64);
+        threadPoolTaskExecutor.setQueueCapacity(2000);
+        threadPoolTaskExecutor.setKeepAliveSeconds(50000);
         threadPoolTaskExecutor.setThreadNamePrefix("video analizy");
         return threadPoolTaskExecutor;
     }

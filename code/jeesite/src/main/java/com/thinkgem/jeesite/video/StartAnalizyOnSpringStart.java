@@ -1,6 +1,8 @@
 package com.thinkgem.jeesite.video;
 
 
+import java.util.Set;
+
 import com.sensetime.ad.sdk.StLibrary;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.FileUtils;
@@ -8,6 +10,7 @@ import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
+import org.opencv.core.Core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +19,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
-
-import java.util.Set;
 
 /**
  * 项目启动时就开启线程分析视频是否违规
@@ -36,6 +37,8 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
         ApplicationContext parent = applicationContext.getParent();
         //表示是Spring容易创建时
         if (parent == null) {
+
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
             int[] retCode = new int[1];
             String lic = FileUtils.readToString(Global.getConfig("video.monitor.license.path"));
