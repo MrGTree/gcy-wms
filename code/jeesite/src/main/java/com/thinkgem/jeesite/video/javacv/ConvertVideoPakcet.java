@@ -58,7 +58,6 @@ import org.bytedeco.ffmpeg.swscale.SwsContext;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.DoublePointer;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +73,6 @@ public class ConvertVideoPakcet {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     FFmpegFrameGrabber grabber = null;
-    FFmpegFrameRecorder record = null;
     int width = -1, height = -1;
     int i = 1;
 
@@ -172,6 +170,15 @@ public class ConvertVideoPakcet {
         sws_freeContext(sws_ctx);//Free SwsContext
         avcodec_close(pCodecCtx);// Close the codec
         avformat_close_input(pFormatCtx);// Close the video file
+
+        if (grabber != null) {
+            try {
+                grabber.stop();
+                grabber.release();
+            } catch (Exception e) {
+                logger.error("{}stop grabber error:",urlMapper.getInputUrl(),e);
+            }
+        }
     }
 
     /**
@@ -421,7 +428,7 @@ public class ConvertVideoPakcet {
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
-                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(),manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
+                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(), manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
                                                             new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
                                                             //清空map
                                                             closeRelationMap.clear();
@@ -519,6 +526,7 @@ public class ConvertVideoPakcet {
         }
 
         logger.info("{}go loop finish !!!,err_index:{},no_frame_index{}", urlMapper.getInputUrl());
+        freeAndClose();
         urlMappers.add(urlMapper);
         return this;
     }
