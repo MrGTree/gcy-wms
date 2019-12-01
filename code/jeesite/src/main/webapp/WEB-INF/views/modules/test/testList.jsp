@@ -11,10 +11,9 @@
 <table id="contentTable" class="table table-striped table-bordered table-condensed">
 	<thead>
 	<tr>
-		<th style="text-align:center;vertical-align:middle;">待分析视频</th>
-		<th style="text-align:center;vertical-align:middle;">违规推送</th>
-		<th style="text-align:center;vertical-align:middle;">摄像头编号</th>
-		<th style="text-align:center;vertical-align:middle;">操作</th>
+		<th style="text-align:center;vertical-align:middle;width: 40%">待分析视频</th>
+		<th style="text-align:center;vertical-align:middle;width: 40%">违规推送</th>
+		<th style="text-align:center;vertical-align:middle;width: 20%">摄像头编号</th>
 	</tr>
 	</thead>
 	<tbody>
@@ -28,9 +27,6 @@
 			</td>
 			<td style="text-align:center;vertical-align:middle;">
 					${urlMapper.camerName}
-			</td>
-			<td style="text-align:center;vertical-align:middle;" rowspan="3">
-				<input type="button" value="开始分析"  onclick="document.getElementById('btnSubmit').click()" />
 			</td>
 		</tr>
 	</c:forEach>
