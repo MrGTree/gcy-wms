@@ -3,15 +3,15 @@
  */
 package com.thinkgem.jeesite.common.config;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+
 import com.ckfinder.connector.ServletContextFactory;
 import com.google.common.collect.Maps;
 import com.thinkgem.jeesite.common.utils.PropertiesLoader;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import org.springframework.core.io.DefaultResourceLoader;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
 
 /**
  * 全局配置类
@@ -45,6 +45,14 @@ public class Global {
 	 */
 	public static final String SHOW = "1";
 	public static final String HIDE = "0";
+
+	/**
+	 * 消息类型
+	 * 1.表示维护视频消息
+	 * 2.表示给定违规距离消息
+	 */
+	public static final String MESSAGE_TYPE_1="1";
+	public static final String MESSAGE_TYPE_2="2";
 
 	/**
 	 * 是/否
@@ -129,6 +137,10 @@ public class Global {
 
 	public static String getModelPath() {
 		return getConfig("video.monitor.model.path");
+	}
+
+	public static String getImagePath() {
+		return getConfig("video.monito.save.image.path");
 	}
 
 	

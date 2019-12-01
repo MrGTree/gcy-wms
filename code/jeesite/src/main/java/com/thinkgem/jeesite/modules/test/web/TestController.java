@@ -12,14 +12,21 @@ import java.util.Set;
 
 import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sensetime.ad.core.StCrowdDensityDetector;
+import com.sensetime.ad.core.StFaceException;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.sensetime.ad.sdk.StLibrary;
+import com.sensetime.ad.sdk.StPointF;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.persistence.Page;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.common.web.BaseController;
+import com.thinkgem.jeesite.video.javacv.BreakRulePushMessage;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
-import com.thinkgem.jeesite.video.javacv.Entity.RuleBreak;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
@@ -27,10 +34,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.socket.TextMessage;
 
 /**
  * 测试Controller
@@ -57,11 +64,49 @@ public class TestController extends BaseController {
     @RequestMapping(value = "websocket")
     @ResponseBody
     public String websocket() throws JsonProcessingException {
-        RuleBreak ruleBreak = new RuleBreak(1920,1080,new Man(100, 100), new Man(200, 200), "1");
-        ObjectMapper objectMapper = new ObjectMapper();
-        String s = objectMapper.writeValueAsString(ruleBreak);
-        SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(s));
-        return s;
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1080, 1902, new Man(100, 100), new Man(200, 200), "1", null, null));
+        return "ok";
+    }
+
+    /**
+     * 测试通知请求
+     * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "saveImage")
+    @ResponseBody
+    public Object saveImage(String path) throws StFaceException {
+        int[] width1 = new int[1];
+        int[] height1 = new int[1];
+
+        String filePath = path;
+        logger.debug("input path = " + filePath);
+
+        byte[] imageData = StLibrary.stGetBgrDataFromImage(path, width1, height1);
+
+        StCrowdDensityDetector detector = new StCrowdDensityDetector(Global.getModelPath());
+        StCrowdDensityResult crowdResult = detector.track(imageData, StImageFormat.ST_PIX_FMT_BGR888,
+                width1[0], height1[0]);
+
+        logger.debug("Width: " + crowdResult.getWidth());
+        logger.debug("Height: " + crowdResult.getHeight());
+        logger.debug("Number of People: " + crowdResult.getNumberOfPeople());
+        logger.debug("Number of keypoints: " + crowdResult.getKeypointCount());
+        logger.debug("keypoints coordinator: ");
+        StPointF[] pts = crowdResult.getKeypoints();
+        for (StPointF pt : pts) {
+            logger.debug(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
+        }
+
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(), new Man(1, 2), new Man(2, 4), "123", imageData, crowdResult));
+
+        if (detector != null) {
+            detector.release();
+        }
+        return "ok";
+
     }
 
     /**
@@ -72,17 +117,22 @@ public class TestController extends BaseController {
      * @throws
      */
     @RequestMapping(value = "toStartAnalizy")
-    public String toStartAnalizy(String password) {
-        if (!StringUtils.equals("1qaz@WSX",password)){
+    public String toStartAnalizy(String password, Model model) {
+        if (!StringUtils.equals("1qaz@WSX", password)) {
             return "redirect:/a";
         }
-        return "modules/test/testForm";
-
+        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+        Page<UrlMapper> page = new Page<>();
+        page.setList(new ArrayList<>(urlMappers));
+        page.setCount(urlMappers.size());
+        model.addAttribute("page", page);
+        return "modules/test/testList";
     }
+
 
     @ModelAttribute
     public UrlMapper get() {
-       return new UrlMapper();
+        return new UrlMapper();
     }
 
     /**
@@ -96,7 +146,7 @@ public class TestController extends BaseController {
     @ResponseBody
     public String startAnalizy(UrlMapper urlMapper) {
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
-        if (urlMapper != null && StringUtils.isNotEmpty(urlMapper.getInputUrl())){
+        if (urlMapper != null && StringUtils.isNotEmpty(urlMapper.getInputUrl())) {
             urlMappers.add(urlMapper);
         }
         if (CollectionUtils.isNotEmpty(urlMappers)) {
@@ -172,7 +222,7 @@ public class TestController extends BaseController {
                                     int time = closeManOn.getTime();
                                     if (time >= 6) {
                                         //违规了，发流等待 3 分钟
-                                        System.out.println(manOut + " | " + man + "|" + time + "|" + distance);
+                                        logger.debug(manOut + " | " + man + "|" + time + "|" + distance);
                                         //清空map
                                         closeRelationMap.clear();
                                         break manLoop;
@@ -243,7 +293,7 @@ public class TestController extends BaseController {
             }
             long endTime = System.currentTimeMillis();
             //1000 - (endTime - startTime)
-            //System.out.println("(endTime - startTime) = " + (endTime - startTime));
+            //logger.debug("(endTime - startTime) = " + (endTime - startTime));
             long timeSleep = 1000 - (endTime - startTime);
             if (timeSleep > 0) {
                 Thread.sleep(timeSleep);

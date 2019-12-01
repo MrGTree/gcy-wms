@@ -31,7 +31,6 @@ import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
@@ -44,11 +43,9 @@ import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
-import com.thinkgem.jeesite.video.javacv.Entity.RuleBreak;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
 import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
-import com.thinkgem.jeesite.websocket.WsHandler;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
 import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
@@ -65,7 +62,7 @@ import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.socket.TextMessage;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -90,6 +87,7 @@ public class ConvertVideoPakcet {
     private UrlMapper urlMapper;
     private Float useScore;
     private Float tooCloseValue;
+
     public ConvertVideoPakcet() {
     }
 
@@ -147,7 +145,7 @@ public class ConvertVideoPakcet {
         }
         // 视频参数
         audiocodecid = grabber.getAudioCodec();
-        logger.debug("{} audiocodecid is {},width is {},heigth is {}", src, audiocodecid,width,height);
+        logger.debug("{} audiocodecid is {},width is {},heigth is {}", src, audiocodecid, width, height);
         codecid = grabber.getVideoCodec();
         framerate = grabber.getVideoFrameRate();// 帧率
         bitrate = grabber.getVideoBitrate();// 比特率
@@ -330,9 +328,6 @@ public class ConvertVideoPakcet {
 
         logger.debug("analizy go go go go ");
 
-        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
-        urlMappers.remove(urlMapper);
-
         // Determine required buffer size and allocate buffer
         BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
 
@@ -342,6 +337,8 @@ public class ConvertVideoPakcet {
         //分析时违规记录
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
+        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+        urlMappers.remove(urlMapper);
         //for循环获取视频帧
         for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
             logger.info("analizy one second start ");
@@ -424,9 +421,7 @@ public class ConvertVideoPakcet {
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
-                                                            RuleBreak ruleBreak = new RuleBreak(width,height,manOut, manIn, urlMapper.getCamerName());
-                                                            ObjectMapper objectMapper = new ObjectMapper();
-                                                            SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(objectMapper.writeValueAsString(ruleBreak)));
+                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(),manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
                                                             new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
                                                             //清空map
                                                             closeRelationMap.clear();
@@ -523,7 +518,8 @@ public class ConvertVideoPakcet {
             detector.release();
         }
 
-        logger.info("{}go loop finish !!!", urlMapper.getInputUrl());
+        logger.info("{}go loop finish !!!,err_index:{},no_frame_index{}", urlMapper.getInputUrl());
+        urlMappers.add(urlMapper);
         return this;
     }
 

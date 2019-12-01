@@ -1,5 +1,16 @@
 package com.thinkgem.jeesite.websocket;
 
+import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static com.thinkgem.jeesite.common.config.Global.MESSAGE_TYPE_2;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
+import com.thinkgem.jeesite.common.utils.DateUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.MessageSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
@@ -7,10 +18,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class WsHandler extends TextWebSocketHandler {
 
@@ -28,6 +35,15 @@ public class WsHandler extends TextWebSocketHandler {
         //建立连接后的操作
         users.add(session);
         logger.info("some one use websocket {}" , session);
+        Date date = new Date();
+        MessageSend messageSend = new MessageSend();
+        messageSend.setCurrentTime(DateUtils.formatDateTime(date));
+        messageSend.setMessageType(MESSAGE_TYPE_2);
+        HashMap<String, String> messageMap = new HashMap<>();
+        messageMap.put("closeValue",String.valueOf(Global.getTooCloseValue()));
+        messageSend.setMessageValue(messageMap);
+        TextMessage textMessage = new TextMessage(JsonMapper.getInstance().toJson(messageSend));
+        session.sendMessage(textMessage);
         super.afterConnectionEstablished(session);
     }
 
