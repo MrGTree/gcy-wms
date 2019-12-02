@@ -353,7 +353,7 @@ public class ConvertVideoPakcet {
 
         long no_frame_index = 0;
         //for循环获取视频帧
-        for (; no_frame_index < 20 || err_index > 1; ) {
+        for (; no_frame_index < 20 && err_index < 1; ) {
             //获取分析开始，总时间需要一秒
             long startTime = System.currentTimeMillis();
             AVPacket pkt = null;
