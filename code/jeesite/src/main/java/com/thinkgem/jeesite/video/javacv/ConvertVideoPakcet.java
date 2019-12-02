@@ -1,36 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
-import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
-import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
-import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
-import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
-import static org.bytedeco.ffmpeg.global.avutil.av_free;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
-import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
-import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
-import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
@@ -62,6 +32,37 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
+import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
+import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
+import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
+import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
+import static org.bytedeco.ffmpeg.global.avutil.av_free;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
+import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
+import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
+import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -133,9 +134,9 @@ public class ConvertVideoPakcet {
         logger.debug("monitor from url:{}" + src);
         // 采集/抓取器
         grabber = new FFmpegFrameGrabber(src);
-//        if (src.indexOf("rtsp") >= 0) {
-        grabber.setOption("rtsp_transport", "tcp");
-//        }
+        if (hasRTSP(src)) {
+            grabber.setOption("rtsp_transport", "tcp");
+        }
         grabber.start();// 开始之后ffmpeg会采集视频信息，之后就可以获取音视频信息
         if (width < 0 || height < 0) {
             width = grabber.getImageWidth();
@@ -158,6 +159,13 @@ public class ConvertVideoPakcet {
         return this;
     }
 
+    /*
+     * 是否包含rtsp
+     */
+    private boolean hasRTSP(String str) {
+        return str.indexOf("rtsp") > -1;
+    }
+
     /**
      * free all struct
      */
@@ -176,7 +184,7 @@ public class ConvertVideoPakcet {
                 grabber.stop();
                 grabber.release();
             } catch (Exception e) {
-                logger.error("{}stop grabber error:",urlMapper.getInputUrl(),e);
+                logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
             }
         }
     }
@@ -346,10 +354,9 @@ public class ConvertVideoPakcet {
 
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
         urlMappers.remove(urlMapper);
-        int no_frame_index = 0;
+        long no_frame_index = 0;
         //for循环获取视频帧
         for (; no_frame_index < 10 || err_index > 1; ) {
-            logger.info("analizy one second start ");
             //获取分析开始，总时间需要一秒
             long startTime = System.currentTimeMillis();
             AVPacket pkt = null;
@@ -359,6 +366,7 @@ public class ConvertVideoPakcet {
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
                     //空包记录次数跳过
                     no_frame_index++;
+                    logger.debug("analizy no_frame_index is:{}", no_frame_index);
                     continue;
                 }
                 if (pkt.stream_index() == videoStreamIndex) {
@@ -508,12 +516,15 @@ public class ConvertVideoPakcet {
                 }
             } catch (Exception e) {
                 err_index++;
+                no_frame_index = 0;
                 logger.error("analizy video error :" + e);
             } catch (IOException e) {
                 err_index++;
+                no_frame_index = 0;
                 logger.error("analizy video error :" + e);
             } catch (StFaceException e) {
                 err_index++;
+                no_frame_index = 0;
                 logger.error("analizy video error :" + e);
             }
             logger.info("analizy one second end ");
@@ -534,8 +545,9 @@ public class ConvertVideoPakcet {
             detector.release();
         }
 
-        logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(),err_index,no_frame_index);
+        logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
         freeAndClose();
+        av_free(buffer);
         urlMappers.add(urlMapper);
         return this;
     }
