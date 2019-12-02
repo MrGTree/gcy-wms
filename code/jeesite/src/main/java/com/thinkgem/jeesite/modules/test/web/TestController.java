@@ -152,6 +152,7 @@ public class TestController extends BaseController {
         if (CollectionUtils.isNotEmpty(urlMappers)) {
             // 每个用一个线程处理
             for (UrlMapper urlMapperPush : urlMappers) {
+                urlMappers.remove(urlMapperPush);
                 threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapperPush));
             }
             return "push ok";

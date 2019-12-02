@@ -54,9 +54,9 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
             //服务器启动的时候，获取路径
             Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
             if (CollectionUtils.isNotEmpty(urlMappers)) {
-
                 // 每个用一个线程处理
                 for (UrlMapper urlMapper : urlMappers) {
+                    urlMappers.remove(urlMapper);
                     threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapper));
                 }
 
