@@ -7,6 +7,7 @@ import com.sensetime.ad.sdk.StLibrary;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.FileUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -42,7 +43,11 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
 
             int[] retCode = new int[1];
             String lic = FileUtils.readToString(Global.getConfig("video.monitor.license.path"));
-            String activeCode = StLibrary.onlineActivite("", lic, retCode);
+            String activeCode = FileUtils.readToString(Global.getConfig("video.monitor.activecode.path"));
+            if (StringUtils.isBlank(activeCode)){
+                activeCode = StLibrary.onlineActivite("", lic, retCode);
+                FileUtils.writeToFile(Global.getConfig("video.monitor.activecode.path"),activeCode,false);
+            }
             if (retCode[0] != 0) {
                 logger.error("get online activation code failed, rc = " + retCode[0]);
             }
