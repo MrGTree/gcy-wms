@@ -170,16 +170,26 @@ public class ConvertVideoPakcet {
      * free all struct
      */
     public void freeAndClose() {
-        av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
-        av_free(pFrame);// Free the YUV frame
-        av_free(outFrameRGB);// Free the RGB image
-        sws_freeContext(sws_ctx);//Free SwsContext
-        avcodec_close(pCodecCtx);// Close the codec
-        avformat_close_input(pFormatCtx);// Close the video file
-
+        if (packet != null) {
+            av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
+        }
+        if (pFrame != null) {
+            av_free(pFrame);// Free the YUV frame
+        }
+        if (outFrameRGB != null) {
+            av_free(outFrameRGB);// Free the RGB image
+        }
+        if (sws_ctx != null) {
+            sws_freeContext(sws_ctx);//Free SwsContext
+        }
+        if (pCodecCtx != null) {
+            avcodec_close(pCodecCtx);// Close the codec
+        }
+        if (pFormatCtx != null) {
+            avformat_close_input(pFormatCtx);// Close the video file
+        }
         if (grabber != null) {
             try {
-                grabber.stop();
                 grabber.release();
             } catch (Exception e) {
                 logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
@@ -553,7 +563,6 @@ public class ConvertVideoPakcet {
         }
 
         logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
-        freeAndClose();
         av_free(buffer);
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
         urlMappers.add(urlMapper);
