@@ -1,8 +1,5 @@
 package com.thinkgem.jeesite.video.javacv;
 
-import java.util.Date;
-
-import static com.thinkgem.jeesite.common.config.Global.MESSAGE_TYPE_1;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
@@ -20,6 +17,10 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
+
+import java.util.Date;
+
+import static com.thinkgem.jeesite.common.config.Global.MESSAGE_TYPE_1;
 
 /**
  * 另起线程通知和保存图片信息
@@ -55,18 +56,26 @@ public class BreakRulePushMessage implements Runnable {
         String threadName = Thread.currentThread().getName();
         logger.debug("{} BreakRulePushMessage start ,camerName:{}", threadName, camerName);
         Date date = new Date();
-
+        Mat image1 = null;
+        Mat colorMat = null;
         try {
             //保存图片
-            Mat image1 = new Mat(height, width, CvType.CV_8UC3);
+            image1 = new Mat(height, width, CvType.CV_8UC3);
             image1.put(0, 0, bytes);
-            Mat colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
+            colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
             String dateStr = DateUtils.formatDateTime(date);
-            String fileName = Global.getImagePath() + camerName + "_" + dateStr + "_" + IdGen.uuid() +".jpg";
+            String fileName = Global.getImagePath() + camerName + "_" + dateStr + "_" + IdGen.uuid() + ".jpg";
             Imgcodecs.imwrite(fileName, colorMat);
-            logger.info("save image success,camerName:{},fileName:{}",camerName,fileName);
+            logger.info("save image success,camerName:{},fileName:{}", camerName, fileName);
         } catch (Exception e) {
             logger.error("{} save image fail:", camerName, e);
+        } finally {
+            if (image1 != null) {
+                image1.release();
+            }
+            if (colorMat != null){
+                colorMat.release();
+            }
         }
 
         try {
@@ -77,7 +86,7 @@ public class BreakRulePushMessage implements Runnable {
             messageSend.setMessageType(MESSAGE_TYPE_1);
             messageSend.setMessageValue(ruleBreak);
             SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)));
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("{} send message fail:", camerName, e);
         }
         logger.debug("{} BreakRulePushMessage end ,camerName:{}", threadName, camerName);

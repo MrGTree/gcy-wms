@@ -43,37 +43,52 @@ public class VideoAnalizyUtils {
     }
 
     public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result) {
-        Mat dmap = new Mat(crowd_result.getHeight(), crowd_result.getWidth(), CV_32F);
-        dmap.put(0, 0, crowd_result.getDensityMap());
-        // normalize dmap
-        Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(dmap);
-        dmap = dmap.mul(dmap, 1 / minMaxLoc.maxVal);
-        dmap.convertTo(dmap, CV_8UC3, 255);
-        // gen color map and resize
-        Mat color_dmap = new Mat();
-        Imgproc.applyColorMap(dmap, color_dmap, COLORMAP_JET);
-        Imgproc.resize(color_dmap, color_dmap, ori_img.size());
-        // add weight for visualize
-        Mat vis_dmap = new Mat(ori_img.rows(), ori_img.cols(), ori_img.type());
-        Mat base_img = ori_img.clone();
+        Mat dmap = null;
+        Mat color_dmap = null;
+        Mat base_img = null;
+        try {
+            dmap = new Mat(crowd_result.getHeight(), crowd_result.getWidth(), CV_32F);
+            dmap.put(0, 0, crowd_result.getDensityMap());
+            // normalize dmap
+            Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(dmap);
+            dmap = dmap.mul(dmap, 1 / minMaxLoc.maxVal);
+            dmap.convertTo(dmap, CV_8UC3, 255);
+            // gen color map and resize
+            color_dmap = new Mat();
+            Imgproc.applyColorMap(dmap, color_dmap, COLORMAP_JET);
+            Imgproc.resize(color_dmap, color_dmap, ori_img.size());
+            // add weight for visualize
+            Mat vis_dmap = new Mat(ori_img.rows(), ori_img.cols(), ori_img.type());
+            base_img = ori_img.clone();
 
-        float alpha = 0.5f;
-        addWeighted(color_dmap, alpha, base_img, 1 - alpha, 0, vis_dmap);
+            float alpha = 0.5f;
+            addWeighted(color_dmap, alpha, base_img, 1 - alpha, 0, vis_dmap);
 
-        // draw keypoint
-        StPointF[] pts = crowd_result.getKeypoints();
-        Scalar color = new Scalar(255, 255, 255);
-        for (int i = 0; i < crowd_result.getKeypointCount(); ++i) {
-            Imgproc.circle(
-                    vis_dmap,
-                    new Point(pts[i].x, pts[i].y),
-                    3, color, -1);
+            // draw keypoint
+            StPointF[] pts = crowd_result.getKeypoints();
+            Scalar color = new Scalar(255, 255, 255);
+            for (int i = 0; i < crowd_result.getKeypointCount(); ++i) {
+                Imgproc.circle(
+                        vis_dmap,
+                        new Point(pts[i].x, pts[i].y),
+                        3, color, -1);
 
-            Imgproc.putText(vis_dmap, String.format("%.2f", crowd_result.getPointsScore()[i]),
-                    new Point(pts[i].x, pts[i].y - 5),
-                    FONT_HERSHEY_SIMPLEX, 1, new Scalar(255, 0, 0),
-                    2, 8, false);
+                Imgproc.putText(vis_dmap, String.format("%.2f", crowd_result.getPointsScore()[i]),
+                        new Point(pts[i].x, pts[i].y - 5),
+                        FONT_HERSHEY_SIMPLEX, 1, new Scalar(255, 0, 0),
+                        2, 8, false);
+            }
+            return vis_dmap;
+        } finally {
+            if (dmap != null) {
+                dmap.release();
+            }
+            if (color_dmap != null) {
+                color_dmap.release();
+            }
+            if (base_img != null) {
+                base_img.release();
+            }
         }
-        return vis_dmap;
     }
 }

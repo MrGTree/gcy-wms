@@ -169,12 +169,10 @@ public class ConvertVideoPakcet {
     /**
      * free all struct
      */
-    private void freeAndClose() {
+    public void freeAndClose() {
         av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
-
         av_free(pFrame);// Free the YUV frame
         av_free(outFrameRGB);// Free the RGB image
-
         sws_freeContext(sws_ctx);//Free SwsContext
         avcodec_close(pCodecCtx);// Close the codec
         avformat_close_input(pFormatCtx);// Close the video file
@@ -434,7 +432,19 @@ public class ConvertVideoPakcet {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
                                                             ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                                            new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
+                                                            PushBreakRuleVideo pushBreakRuleVideo = null;
+                                                            try {
+                                                                pushBreakRuleVideo = new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
+                                                            } finally {
+                                                                if (pushBreakRuleVideo != null) {
+                                                                    if (pushBreakRuleVideo.grabber != null) {
+                                                                        pushBreakRuleVideo.grabber.release();
+                                                                    }
+                                                                    if (pushBreakRuleVideo.record != null) {
+                                                                        pushBreakRuleVideo.record.release();
+                                                                    }
+                                                                }
+                                                            }
                                                             //清空map
                                                             closeRelationMap.clear();
                                                             break manLoop;
