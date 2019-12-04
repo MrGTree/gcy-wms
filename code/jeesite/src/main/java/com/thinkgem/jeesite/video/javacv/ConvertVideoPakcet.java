@@ -1,6 +1,36 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
+import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
+import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
+import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
+import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
+import static org.bytedeco.ffmpeg.global.avutil.av_free;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
+import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
+import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
+import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
@@ -32,37 +62,6 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
-import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
-import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
-import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
-import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
-import static org.bytedeco.ffmpeg.global.avutil.av_free;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
-import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
-import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
-import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -102,7 +101,7 @@ public class ConvertVideoPakcet {
     private String modelPath;
 
 
-    private StCrowdDensityDetector detector;
+    StCrowdDensityDetector detector;
 
     {
         modelPath = Global.getModelPath();
@@ -190,7 +189,8 @@ public class ConvertVideoPakcet {
         }
         if (grabber != null) {
             try {
-                grabber.release();
+                grabber.stop();
+                grabber = null;
             } catch (Exception e) {
                 logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
             }
@@ -348,15 +348,7 @@ public class ConvertVideoPakcet {
     public ConvertVideoPakcet go() {
         long err_index = 0;//采集或推流导致的错误次数
         //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
-
         logger.debug("analizy go go go go ");
-
-        // Determine required buffer size and allocate buffer
-        BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
-
-        // Assign appropriate parts of buffer to image planes in pFrameRGB.
-        av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
-
         //分析时违规记录
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
@@ -383,10 +375,15 @@ public class ConvertVideoPakcet {
                         //Receive decoded video frame
                         if (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
                             //Sucesss.
+                            // Determine required buffer size and allocate buffer
+                            BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
+                            // Assign appropriate parts of buffer to image planes in pFrameRGB.
+                            av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
                             // Convert the image from its native format to BGR
                             sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
                             //Convert BGR to ByteBuffer
                             byte[] bytes = saveFrame(outFrameRGB, width, height);
+                            av_free(buffer);//free buffer
                             //获取分析这一视频帧图片
                             StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
@@ -449,10 +446,13 @@ public class ConvertVideoPakcet {
                                                                 if (pushBreakRuleVideo != null) {
                                                                     if (pushBreakRuleVideo.grabber != null) {
                                                                         pushBreakRuleVideo.grabber.release();
+                                                                        pushBreakRuleVideo.grabber=null;
                                                                     }
                                                                     if (pushBreakRuleVideo.record != null) {
                                                                         pushBreakRuleVideo.record.release();
+                                                                        pushBreakRuleVideo.record=null;
                                                                     }
+                                                                    pushBreakRuleVideo=null;
                                                                 }
                                                             }
                                                             //清空map
@@ -543,6 +543,7 @@ public class ConvertVideoPakcet {
                 logger.error("analizy video error :" + e);
             } finally {
                 av_free_packet(pkt);
+                pkt = null;
             }
             logger.info("analizy one second end ");
             //获取单个视频帧结束
@@ -557,13 +558,7 @@ public class ConvertVideoPakcet {
                 }
             }
         }
-
-        if (detector != null) {
-            detector.release();
-        }
-
         logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
-        av_free(buffer);
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
         urlMappers.add(urlMapper);
         return this;

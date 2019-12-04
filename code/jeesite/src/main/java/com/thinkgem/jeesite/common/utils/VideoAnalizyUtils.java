@@ -1,5 +1,12 @@
 package com.thinkgem.jeesite.common.utils;
 
+import java.util.Set;
+
+import static org.opencv.core.Core.addWeighted;
+import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.core.CvType.CV_8UC3;
+import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
+import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
@@ -12,14 +19,6 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Set;
-
-import static org.opencv.core.Core.addWeighted;
-import static org.opencv.core.CvType.CV_32F;
-import static org.opencv.core.CvType.CV_8UC3;
-import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
-import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
 
 /**
  * @author liuji
@@ -82,12 +81,15 @@ public class VideoAnalizyUtils {
         } finally {
             if (dmap != null) {
                 dmap.release();
+                dmap = null;
             }
             if (color_dmap != null) {
                 color_dmap.release();
+                color_dmap = null;
             }
             if (base_img != null) {
                 base_img.release();
+                base_img = null;
             }
         }
     }

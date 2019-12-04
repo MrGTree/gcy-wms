@@ -175,6 +175,7 @@ public class PushBreakRuleVideo {
                 throw e;
             } finally {
                 av_free_packet(pkt);
+                pkt = null;
             }
         }
         releaseAll();

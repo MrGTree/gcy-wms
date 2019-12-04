@@ -1,11 +1,11 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import java.util.Set;
+
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Set;
 
 /**
  * 商户缓存信息更新执行线程
@@ -41,9 +41,14 @@ public class VideoAnalizyHandler implements Runnable {
             Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
             urlMappers.add(urlMapper);
         } finally {
-            if (convertVideoPakcet != null){
+            if (convertVideoPakcet != null) {
                 convertVideoPakcet.freeAndClose();
+                if (convertVideoPakcet.detector != null) {
+                    convertVideoPakcet.detector.release();
+                }
+                convertVideoPakcet.grabber = null;
             }
+            convertVideoPakcet = null;
         }
         return;
     }
