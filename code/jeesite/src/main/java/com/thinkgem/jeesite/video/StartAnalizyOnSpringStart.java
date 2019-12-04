@@ -1,8 +1,6 @@
 package com.thinkgem.jeesite.video;
 
 
-import java.util.Set;
-
 import com.sensetime.ad.sdk.StLibrary;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.FileUtils;
@@ -20,6 +18,8 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 /**
  * 项目启动时就开启线程分析视频是否违规
@@ -39,8 +39,11 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
         //表示是Spring容易创建时
         if (parent == null) {
 
+            //Physical memory usage is too high: physicalBytes > maxPhysicalBytes
+            //https://stackoverflow.com/questions/44598965/physical-memory-usage-is-too-high
             System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-
+            System.setProperty("org.bytedeco.javacpp.maxphysicalbytes", "0");
+            System.setProperty("org.bytedeco.javacpp.maxbytes", "0");
             int[] retCode = new int[1];
             String lic = FileUtils.readToString(Global.getConfig("video.monitor.license.path"));
             String activeCode = FileUtils.readToString(Global.getConfig("video.monitor.activecode.path"));
