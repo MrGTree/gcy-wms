@@ -3,14 +3,6 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
@@ -28,6 +20,7 @@ import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.PushBreakRuleVideo;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -38,6 +31,16 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 
 /**
  * 测试Controller
@@ -53,6 +56,44 @@ public class TestController extends BaseController {
     private WsHandler wsHandler;
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
+
+    /**
+     * 测试录制
+     * * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "record")
+    @ResponseBody
+    public String record() throws IOException {
+        PushBreakRuleVideo pushBreakRuleVideo = null;
+        try {
+            pushBreakRuleVideo = new PushBreakRuleVideo().from("rtmp://127.0.0.1:1935/normal/classroom01-camera01").to("rtmp://127.0.0.1:11935/violation-rule?vhost=violation-rule-record/classroom01-camera01").go();
+        } finally {
+        }
+        return "ok";
+    }
+
+
+    /**
+     * 测试录制
+     * * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "record2")
+    @ResponseBody
+    public String record2() throws IOException {
+        PushBreakRuleVideo pushBreakRuleVideo = null;
+        try {
+            pushBreakRuleVideo = new PushBreakRuleVideo().from("rtsp://admin:admin12345@192.168.1.208").to("rtmp://127.0.0.1:11935/violation-rule?vhost=violation-rule-record/classroom01-camera08").go();
+        } finally {
+        }
+        return "ok";
+    }
 
     /**
      * 测试通知请求
