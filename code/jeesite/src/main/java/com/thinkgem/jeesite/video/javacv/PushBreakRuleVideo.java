@@ -1,13 +1,13 @@
 package com.thinkgem.jeesite.video.javacv;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
-import static org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_AAC;
-import static org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264;
 import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
+import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_DEBUG;
+import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
 import com.thinkgem.jeesite.common.config.Global;
 import org.bytedeco.ffmpeg.avcodec.AVPacket;
-import org.bytedeco.ffmpeg.avformat.AVFormatContext;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber;
@@ -82,33 +82,48 @@ public class PushBreakRuleVideo {
     public PushBreakRuleVideo to(String out) throws IOException {
         // 录制/推流器
         logger.info("PushBreakRuleVideo record go go go ");
-        record = new FFmpegFrameRecorder(out, width, height);
-        record.setVideoOption("crf", "18");
+        record = new FFmpegFrameRecorder(out, 1280, 720,0);
+        //record = FFmpegFrameRecorder.createDefault(out);
+//        record.setVideoOption("crf", "18");
 //        record.setVideoOption("tune", "zerolatency");
 //        record.setVideoOption("preset", "ultrafast");
-        record.setGopSize(2);
-        record.setFrameRate(framerate);
-        record.setVideoBitrate(bitrate);
-
-        record.setAudioChannels(audioChannels);
-        record.setAudioBitrate(audioBitrate);
-        record.setSampleRate(sampleRate);
-        AVFormatContext fc = null;
-        //rtmp和flv
-        if (hasRTMPFLV(out)) {
-            // 封装格式flv，并使用h264和aac编码
-            record.setFormat("flv");
-            record.setVideoCodec(AV_CODEC_ID_H264);
-            record.setAudioCodec(AV_CODEC_ID_AAC);
-            if (hasRTMPFLV(out)) {
-                fc = grabber.getFormatContext();
-            }
-        } else if (hasMP4(out)) {//MP4
-            record.setFormat("mp4");
-            record.setVideoCodec(AV_CODEC_ID_H264);
-            record.setAudioCodec(AV_CODEC_ID_AAC);
-        }
-        record.start(fc);
+//        record.setGopSize(20);
+//        record.setAspectRatio(16.0/9.0);
+////        record.setFrameRate(framerate);
+//        record.setVideoBitrate(200000);
+////
+////        record.setAudioChannels(audioChannels);
+////        record.setAudioBitrate(audioBitrate);
+////        record.setSampleRate(sampleRate);
+////        AVFormatContext fc = null;
+//
+//        record.setFormat("mp4");
+//        record.setFrameRate(30);
+//        record.setPixelFormat(AV_PIX_FMT_YUVJ420P);
+//        //AV_PIX_FMT_YUVJ420P
+//        record.setVideoCodec(AV_CODEC_ID_H264);
+//        record.setVideoQuality(10);
+//        record.setSampleRate(48000);
+////        record.setSampleFormat(AV_SAMPLE_FMT_FLTP);
+////        record.setAudioCodec(AV_CODEC_ID_AAC);
+//        record.setAudioQuality(0);
+//        logger.error("record:{}");
+////        //rtmp和flv
+////        if (hasRTMPFLV(out)) {
+////            // 封装格式flv，并使用h264和aac编码
+////            record.setFormat("flv");
+////            record.setVideoCodec(AV_CODEC_ID_H264);
+////            record.setAudioCodec(AV_CODEC_ID_AAC);
+////            if (hasRTMPFLV(out)) {
+////                fc = grabber.getFormatContext();
+////            }
+////        } else if (hasMP4(out)) {//MP4
+////            record.setFormat("mp4");
+////            record.setVideoCodec(AV_CODEC_ID_H264);
+////            record.setAudioCodec(AV_CODEC_ID_AAC);
+////        }
+        av_log_set_level(AV_LOG_DEBUG);
+        record.start(grabber.getFormatContext());
         return this;
     }
 
@@ -183,8 +198,22 @@ public class PushBreakRuleVideo {
         return this;
     }
 
-//    public static void main(String[] args) throws IOException {
-//        new PushBreakRuleVideo().from("rtmp://112.74.62.129:1935/normal/classroom01-camera06").to("rtmp://112.74.62.129:11935/violation-rule?vhost=violation-rule-record/classroom01-camera17").go();
-//    }
+
+    public static void main(String[] args) throws IOException {
+        ArrayList<String> strings = new ArrayList<>();
+        strings.add("1");
+        for (;;){
+            try {
+                if (strings.contains("1")){
+                    strings.remove("1");
+                    new PushBreakRuleVideo().from("rtmp://112.74.62.129:1935/normal/classroom01-camera01").to("rtmp://112.74.62.129:11935/violation-rule?vhost=violation-rule-record/classroom01-camera02 ").go();
+                }
+            }catch (Exception e){
+                strings.add("1");
+                e.printStackTrace();
+            }
+        }
+
+    }
 
 }

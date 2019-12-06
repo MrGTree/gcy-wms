@@ -1,5 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import java.util.Map;
 import java.util.Set;
 
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
@@ -33,11 +34,18 @@ public class VideoAnalizyHandler implements Runnable {
     public void run() {
         String threadName = Thread.currentThread().getName();
         logger.debug(threadName + " monitor start update");
-        ConvertVideoPakcet convertVideoPakcet = null;
+        Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
+        ConvertVideoPakcet convertVideoPakcet = convertVideoPakcetMap.get(urlMapper);
         try {
-            convertVideoPakcet = new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl()).go();
+            if (convertVideoPakcet == null) {
+                convertVideoPakcet = new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl());
+                convertVideoPakcetMap.put(urlMapper, convertVideoPakcet);
+            } else {
+                convertVideoPakcet.grabber.restart();
+            }
         } catch (Exception e) {
-            logger.error(threadName + " monitor fail:" + e.getMessage(), e);
+            logger.error(threadName + " monitor fail:", e);
+
             Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
             urlMappers.add(urlMapper);
         } finally {
@@ -48,9 +56,9 @@ public class VideoAnalizyHandler implements Runnable {
                 }
                 convertVideoPakcet.grabber = null;
             }
-            convertVideoPakcet = null;
+            convertVideoPakcetMap.remove(urlMapper);
         }
-        return;
+        convertVideoPakcet.go();
     }
 }
 

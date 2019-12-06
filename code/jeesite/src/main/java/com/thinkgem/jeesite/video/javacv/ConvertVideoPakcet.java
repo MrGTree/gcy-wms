@@ -1,6 +1,36 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
+import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
+import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
+import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
+import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
+import static org.bytedeco.ffmpeg.global.avutil.av_free;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
+import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
+import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
+import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
+import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
+import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
@@ -32,37 +62,6 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
-import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
-import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
-import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
-import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
-import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
-import static org.bytedeco.ffmpeg.global.avutil.av_free;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_fill_arrays;
-import static org.bytedeco.ffmpeg.global.avutil.av_image_get_buffer_size;
-import static org.bytedeco.ffmpeg.global.avutil.av_malloc;
-import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
-import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
-import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -156,6 +155,8 @@ public class ConvertVideoPakcet {
             audioBitrate = 128 * 1000;// 默认音频比特率
         }
         initGrabber(src, AV_PIX_FMT_BGR24);
+        Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
+        convertVideoPakcetMap.put(urlMapper,this);
         return this;
     }
 
@@ -191,6 +192,8 @@ public class ConvertVideoPakcet {
         if (grabber != null) {
             try {
                 grabber.stop();
+                grabber.release();
+                grabber.close();
                 grabber = null;
             } catch (Exception e) {
                 logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
@@ -440,22 +443,27 @@ public class ConvertVideoPakcet {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
                                                             ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                                            PushBreakRuleVideo pushBreakRuleVideo = null;
-                                                            try {
-                                                                pushBreakRuleVideo = new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
-                                                            } finally {
-                                                                if (pushBreakRuleVideo != null) {
-                                                                    if (pushBreakRuleVideo.grabber != null) {
-                                                                        pushBreakRuleVideo.grabber.release();
-                                                                        pushBreakRuleVideo.grabber=null;
-                                                                    }
-                                                                    if (pushBreakRuleVideo.record != null) {
-                                                                        pushBreakRuleVideo.record.release();
-                                                                        pushBreakRuleVideo.record=null;
-                                                                    }
-                                                                    pushBreakRuleVideo=null;
-                                                                }
-                                                            }
+//                                                            PushBreakRuleVideo pushBreakRuleVideo = null;
+//                                                            try {
+//                                                                pushBreakRuleVideo = new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
+//                                                            } finally {
+//                                                                if (pushBreakRuleVideo != null) {
+//                                                                    if (pushBreakRuleVideo.grabber != null) {
+//                                                                        pushBreakRuleVideo.grabber.stop();
+//                                                                        pushBreakRuleVideo.grabber.release();
+//                                                                        pushBreakRuleVideo.grabber.close();
+//                                                                        pushBreakRuleVideo.grabber=null;
+//                                                                    }
+//                                                                    if (pushBreakRuleVideo.record != null) {
+//                                                                        pushBreakRuleVideo.record.stop();
+//                                                                        pushBreakRuleVideo.record.release();
+//                                                                        pushBreakRuleVideo.record.close();
+//                                                                        pushBreakRuleVideo.record=null;
+//                                                                    }
+//                                                                    pushBreakRuleVideo=null;
+//                                                                }
+//                                                            }
+                                                            new FFmpegShellPushVideo(urlMapper).pushBreakRuleVideo();
                                                             //清空map
                                                             closeRelationMap.clear();
                                                             break manLoop;

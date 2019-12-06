@@ -1,6 +1,7 @@
 package com.thinkgem.jeesite.video.javacv;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,5 +36,10 @@ public class UrlMappers {
             urlMapperSet.addAll(urlMappers);
         }
         return urlMapperSet;
+    }
+
+    @Bean(name = "convertVideoPakcetMap")
+    public Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap() {
+        return new ConcurrentHashMap<>(32);
     }
 }

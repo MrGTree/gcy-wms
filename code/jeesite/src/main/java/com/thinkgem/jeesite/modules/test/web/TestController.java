@@ -3,6 +3,15 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
@@ -12,6 +21,7 @@ import com.sensetime.ad.sdk.StLibrary;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.persistence.Page;
+import com.thinkgem.jeesite.common.utils.JavaShellUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.common.web.BaseController;
@@ -31,16 +41,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 
 /**
  * 测试Controller
@@ -108,6 +108,23 @@ public class TestController extends BaseController {
         ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1080, 1902, new Man(100, 100), new Man(200, 200), "1", null, null));
         return "ok";
     }
+
+    /**
+     * 测试通知请求
+     * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "r1")
+    @ResponseBody
+    public String r1() throws JsonProcessingException {
+        String s = "/home/software/srs.oschina/trunk/objs/ffmpeg.src/_release/bin/./ffmpeg -i rtmp://localhost:1935/normal/classroom01-camera01 -vcodec h264 -profile:v baseline -acodec copy -f flv -y rtmp://127.0.0.1:11935/violation-rule?vhost=violation-rule-record/classroom01-camera17";
+        Process execute = JavaShellUtils.execute(s);
+
+        return "ok";
+    }
+
 
     /**
      * 测试通知请求
