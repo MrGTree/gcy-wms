@@ -105,7 +105,7 @@ public class TestController extends BaseController {
     @RequestMapping(value = "websocket")
     @ResponseBody
     public String websocket() throws JsonProcessingException {
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1080, 1902, new Man(100, 100), new Man(200, 200), "1", null, null));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1280, 720, new Man(100, 100), new Man(200, 200), "1", null, null));
         return "ok";
     }
 
