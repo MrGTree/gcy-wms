@@ -3,6 +3,7 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +21,7 @@ import com.sensetime.ad.sdk.StLibrary;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.persistence.Page;
+import com.thinkgem.jeesite.common.utils.JavaShellUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.common.web.BaseController;
@@ -28,6 +30,7 @@ import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.PushBreakRuleVideo;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -54,6 +57,44 @@ public class TestController extends BaseController {
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
+
+    /**
+     * 测试录制
+     * * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "record")
+    @ResponseBody
+    public String record() throws IOException {
+        PushBreakRuleVideo pushBreakRuleVideo = null;
+        try {
+            pushBreakRuleVideo = new PushBreakRuleVideo().from("rtmp://127.0.0.1:1935/normal/classroom01-camera01").to("rtmp://127.0.0.1:11935/violation-rule?vhost=violation-rule-record/classroom01-camera01").go();
+        } finally {
+        }
+        return "ok";
+    }
+
+
+    /**
+     * 测试录制
+     * * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "record2")
+    @ResponseBody
+    public String record2() throws IOException {
+        PushBreakRuleVideo pushBreakRuleVideo = null;
+        try {
+            pushBreakRuleVideo = new PushBreakRuleVideo().from("rtsp://admin:admin12345@192.168.1.208").to("rtmp://127.0.0.1:11935/violation-rule?vhost=violation-rule-record/classroom01-camera08").go();
+        } finally {
+        }
+        return "ok";
+    }
+
     /**
      * 测试通知请求
      * a/test/test/websocket
@@ -64,9 +105,26 @@ public class TestController extends BaseController {
     @RequestMapping(value = "websocket")
     @ResponseBody
     public String websocket() throws JsonProcessingException {
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1080, 1902, new Man(100, 100), new Man(200, 200), "1", null, null));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1280, 720, new Man(100, 100), new Man(200, 200), "1", null, null));
         return "ok";
     }
+
+    /**
+     * 测试通知请求
+     * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "r1")
+    @ResponseBody
+    public String r1() throws JsonProcessingException {
+        String s = "/home/software/srs.oschina/trunk/objs/ffmpeg.src/_release/bin/./ffmpeg -i rtmp://localhost:1935/normal/classroom01-camera01 -vcodec h264 -profile:v baseline -acodec copy -f flv -y rtmp://127.0.0.1:11935/violation-rule?vhost=violation-rule-record/classroom01-camera17";
+        Process execute = JavaShellUtils.execute(s);
+
+        return "ok";
+    }
+
 
     /**
      * 测试通知请求
@@ -100,7 +158,7 @@ public class TestController extends BaseController {
             logger.debug(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
         }
 
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(), new Man(1, 2), new Man(2, 4), "123", imageData, crowdResult));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width1[0], height1[0], new Man(1, 2), new Man(2, 4), "123", imageData, crowdResult));
 
         if (detector != null) {
             detector.release();
@@ -152,6 +210,7 @@ public class TestController extends BaseController {
         if (CollectionUtils.isNotEmpty(urlMappers)) {
             // 每个用一个线程处理
             for (UrlMapper urlMapperPush : urlMappers) {
+                urlMappers.remove(urlMapperPush);
                 threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapperPush));
             }
             return "push ok";

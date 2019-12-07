@@ -1,17 +1,19 @@
 package com.thinkgem.jeesite.video.javacv;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.fasterxml.jackson.databind.JavaType;
 import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * @author liuji
@@ -26,14 +28,18 @@ public class UrlMappers {
     @Bean(name = "urlMapperSet")
     public Set<UrlMapper> urlMapperList() {
         String s = Global.getConfig("video.monitor.urlConfig");
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            return objectMapper.readValue(s, new TypeReference<HashSet<UrlMapper>>() {
-            });
-        } catch (IOException e) {
-            logger.error("init one urlMapperSet bean fail",e);
+        JsonMapper jsonMapper = JsonMapper.getInstance();
+        JavaType collectionType = jsonMapper.createCollectionType(Set.class, UrlMapper.class);
+        Set<UrlMapper> urlMappers = jsonMapper.fromJson(s, collectionType);
+        Set<UrlMapper> urlMapperSet = Collections.newSetFromMap(new ConcurrentHashMap<>(32));
+        if (CollectionUtils.isNotEmpty(urlMappers)){
+            urlMapperSet.addAll(urlMappers);
         }
+        return urlMapperSet;
+    }
 
-        return new HashSet<UrlMapper>();
+    @Bean(name = "convertVideoPakcetMap")
+    public Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap() {
+        return new ConcurrentHashMap<>(32);
     }
 }

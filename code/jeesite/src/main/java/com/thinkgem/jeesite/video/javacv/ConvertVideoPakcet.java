@@ -58,7 +58,6 @@ import org.bytedeco.ffmpeg.swscale.SwsContext;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.DoublePointer;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +73,6 @@ public class ConvertVideoPakcet {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     FFmpegFrameGrabber grabber = null;
-    FFmpegFrameRecorder record = null;
     int width = -1, height = -1;
     int i = 1;
 
@@ -103,7 +101,7 @@ public class ConvertVideoPakcet {
     private String modelPath;
 
 
-    private StCrowdDensityDetector detector;
+    StCrowdDensityDetector detector;
 
     {
         modelPath = Global.getModelPath();
@@ -135,9 +133,9 @@ public class ConvertVideoPakcet {
         logger.debug("monitor from url:{}" + src);
         // 采集/抓取器
         grabber = new FFmpegFrameGrabber(src);
-//        if (src.indexOf("rtsp") >= 0) {
-        grabber.setOption("rtsp_transport", "tcp");
-//        }
+        if (hasRTSP(src)) {
+            grabber.setOption("rtsp_transport", "tcp");
+        }
         grabber.start();// 开始之后ffmpeg会采集视频信息，之后就可以获取音视频信息
         if (width < 0 || height < 0) {
             width = grabber.getImageWidth();
@@ -157,21 +155,50 @@ public class ConvertVideoPakcet {
             audioBitrate = 128 * 1000;// 默认音频比特率
         }
         initGrabber(src, AV_PIX_FMT_BGR24);
+        Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
+        convertVideoPakcetMap.put(urlMapper,this);
         return this;
+    }
+
+    /*
+     * 是否包含rtsp
+     */
+    private boolean hasRTSP(String str) {
+        return str.indexOf("rtsp") > -1;
     }
 
     /**
      * free all struct
      */
-    private void freeAndClose() {
-        av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
-
-        av_free(pFrame);// Free the YUV frame
-        av_free(outFrameRGB);// Free the RGB image
-
-        sws_freeContext(sws_ctx);//Free SwsContext
-        avcodec_close(pCodecCtx);// Close the codec
-        avformat_close_input(pFormatCtx);// Close the video file
+    public void freeAndClose() {
+        if (packet != null) {
+            av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
+        }
+        if (pFrame != null) {
+            av_free(pFrame);// Free the YUV frame
+        }
+        if (outFrameRGB != null) {
+            av_free(outFrameRGB);// Free the RGB image
+        }
+        if (sws_ctx != null) {
+            sws_freeContext(sws_ctx);//Free SwsContext
+        }
+        if (pCodecCtx != null) {
+            avcodec_close(pCodecCtx);// Close the codec
+        }
+        if (pFormatCtx != null) {
+            avformat_close_input(pFormatCtx);// Close the video file
+        }
+        if (grabber != null) {
+            try {
+                grabber.stop();
+                grabber.release();
+                grabber.close();
+                grabber = null;
+            } catch (Exception e) {
+                logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
+            }
+        }
     }
 
     /**
@@ -322,26 +349,16 @@ public class ConvertVideoPakcet {
      */
 
 
-    public ConvertVideoPakcet go() throws StFaceException, InterruptedException {
+    public ConvertVideoPakcet go() {
         long err_index = 0;//采集或推流导致的错误次数
         //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
-
         logger.debug("analizy go go go go ");
-
-        // Determine required buffer size and allocate buffer
-        BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
-
-        // Assign appropriate parts of buffer to image planes in pFrameRGB.
-        av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
-
         //分析时违规记录
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
-        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
-        urlMappers.remove(urlMapper);
+        long no_frame_index = 0;
         //for循环获取视频帧
-        for (int no_frame_index = 0; no_frame_index < 5 || err_index > 1; ) {
-            logger.info("analizy one second start ");
+        for (; no_frame_index < 20 && err_index < 1; ) {
             //获取分析开始，总时间需要一秒
             long startTime = System.currentTimeMillis();
             AVPacket pkt = null;
@@ -351,6 +368,7 @@ public class ConvertVideoPakcet {
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
                     //空包记录次数跳过
                     no_frame_index++;
+                    logger.debug("analizy no_frame_index is:{}", no_frame_index);
                     continue;
                 }
                 if (pkt.stream_index() == videoStreamIndex) {
@@ -361,12 +379,15 @@ public class ConvertVideoPakcet {
                         //Receive decoded video frame
                         if (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
                             //Sucesss.
+                            // Determine required buffer size and allocate buffer
+                            BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
+                            // Assign appropriate parts of buffer to image planes in pFrameRGB.
+                            av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
                             // Convert the image from its native format to BGR
                             sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
                             //Convert BGR to ByteBuffer
                             byte[] bytes = saveFrame(outFrameRGB, width, height);
-
-                            av_free_packet(pkt);
+                            av_free(buffer);//free buffer
                             //获取分析这一视频帧图片
                             StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
@@ -381,7 +402,7 @@ public class ConvertVideoPakcet {
                                         float[] pointsScore = crowdResult.getPointsScore();
                                         float score = pointsScore[j];
                                         if (score > useScore) {
-                                            manList.add(new Man(keypoints[i].x, keypoints[j].y));
+                                            manList.add(new Man(keypoints[j].x, keypoints[j].y));
                                         }
                                     }
                                 }
@@ -421,8 +442,28 @@ public class ConvertVideoPakcet {
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                             logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
-                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(crowdResult.getHeight(), crowdResult.getWidth(),manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                                            new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
+                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
+//                                                            PushBreakRuleVideo pushBreakRuleVideo = null;
+//                                                            try {
+//                                                                pushBreakRuleVideo = new PushBreakRuleVideo().from(urlMapper.getInputUrl()).to(urlMapper.getOutPutUrl()).go();
+//                                                            } finally {
+//                                                                if (pushBreakRuleVideo != null) {
+//                                                                    if (pushBreakRuleVideo.grabber != null) {
+//                                                                        pushBreakRuleVideo.grabber.stop();
+//                                                                        pushBreakRuleVideo.grabber.release();
+//                                                                        pushBreakRuleVideo.grabber.close();
+//                                                                        pushBreakRuleVideo.grabber=null;
+//                                                                    }
+//                                                                    if (pushBreakRuleVideo.record != null) {
+//                                                                        pushBreakRuleVideo.record.stop();
+//                                                                        pushBreakRuleVideo.record.release();
+//                                                                        pushBreakRuleVideo.record.close();
+//                                                                        pushBreakRuleVideo.record=null;
+//                                                                    }
+//                                                                    pushBreakRuleVideo=null;
+//                                                                }
+//                                                            }
+                                                            new FFmpegShellPushVideo(urlMapper).pushBreakRuleVideo();
                                                             //清空map
                                                             closeRelationMap.clear();
                                                             break manLoop;
@@ -497,6 +538,8 @@ public class ConvertVideoPakcet {
 
                         }
                     }
+                } else {
+                    no_frame_index++;
                 }
             } catch (Exception e) {
                 err_index++;
@@ -504,21 +547,28 @@ public class ConvertVideoPakcet {
             } catch (IOException e) {
                 err_index++;
                 logger.error("analizy video error :" + e);
+            } catch (StFaceException e) {
+                err_index++;
+                logger.error("analizy video error :" + e);
+            } finally {
+                av_free_packet(pkt);
+                pkt = null;
             }
             logger.info("analizy one second end ");
             //获取单个视频帧结束
             long endTime = System.currentTimeMillis();
             long timeSleep = 1000 - (endTime - startTime);
-            if (timeSleep > 0) {
-                Thread.sleep(timeSleep);
+            if (timeSleep > 10) {
+                try {
+                    Thread.sleep(timeSleep);
+                } catch (InterruptedException e) {
+                    logger.error("analizy video Thread sleep error :" + e);
+                    Thread.currentThread().interrupt();
+                }
             }
         }
-
-        if (detector != null) {
-            detector.release();
-        }
-
-        logger.info("{}go loop finish !!!,err_index:{},no_frame_index{}", urlMapper.getInputUrl());
+        logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
+        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
         urlMappers.add(urlMapper);
         return this;
     }
