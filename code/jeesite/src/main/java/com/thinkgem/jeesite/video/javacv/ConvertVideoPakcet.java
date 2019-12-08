@@ -75,8 +75,6 @@ public class ConvertVideoPakcet {
 
     FFmpegFrameGrabber grabber = null;
     int width = -1, height = -1;
-    int i = 1;
-
     // 视频参数
     protected int audiocodecid;
     protected int codecid;
@@ -126,6 +124,8 @@ public class ConvertVideoPakcet {
     private AVFrame outFrameRGB;//用于存储转换后的RGB像素数据，默认转换成RGB
     private AVFrame pFrame;//临时的视频帧解码后的图像像素数据，默认yuv420
 
+    private AVPacket pkt;
+
     /**
      *   * 选择视频源
      *   * @param src
@@ -160,7 +160,7 @@ public class ConvertVideoPakcet {
         initGrabber(src, AV_PIX_FMT_BGR24);
         Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
         convertVideoPakcetMap.put(urlMapper, this);
-        logger.info("{} audiocodecid is {},width is {},heigth is {},framerate is {}", src, audiocodecid, width, height,framerate);
+        logger.info("{} audiocodecid is {},width is {},heigth is {},framerate is {}", src, audiocodecid, width, height, framerate);
         return this;
     }
 
@@ -175,21 +175,8 @@ public class ConvertVideoPakcet {
      * free all struct
      */
     public void freeAndClose() {
-        if (pFrame != null) {
-            av_free(pFrame);// Free the YUV frame
-        }
-        if (outFrameRGB != null) {
-            av_free(outFrameRGB);// Free the RGB image
-        }
-        if (sws_ctx != null) {
-            sws_freeContext(sws_ctx);//Free SwsContext
-        }
-        if (pCodecCtx != null) {
-            avcodec_close(pCodecCtx);// Close the codec
-        }
-        if (pFormatCtx != null) {
-            avformat_close_input(pFormatCtx);// Close the video file
-        }
+        avcodec_close(pCodecCtx);// Close the codec
+        sws_freeContext(sws_ctx);//Free SwsContext
         if (grabber != null) {
             try {
                 grabber.stop();
@@ -227,20 +214,12 @@ public class ConvertVideoPakcet {
         width = pCodecCtx.width();
         height = pCodecCtx.height();
 
-
         //scaling/conversion operations by using sws_scale().
         DoublePointer param = null;
-        sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height, fmt, SWS_FAST_BILINEAR, null, null, param);
+        sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height, AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, null, null, param);
 
-        // Allocate video frame
-        pFrame = av_frame_alloc();
-
-        // Allocate an AVFrame structure
-        outFrameRGB = av_frame_alloc();
-        outFrameRGB.width(width);
-        outFrameRGB.height(height);
-        outFrameRGB.format(fmt);
-
+        avformat_close_input(pFormatCtx);// Close the video file
+        pFormatCtx = null;
         return true;
     }
 
@@ -361,7 +340,7 @@ public class ConvertVideoPakcet {
             if (no_frame_index > 40) {
                 try {
                     grabber.restart();
-                    logger.error("{},grabber.restart ",urlMapper.getInputUrl());
+                    logger.info("{},grabber.restart ", urlMapper.getInputUrl());
                     no_frame_index = 0;
                 } catch (Exception e) {
                     err_index++;
@@ -370,7 +349,6 @@ public class ConvertVideoPakcet {
             }
             //获取分析开始，总时间需要一
             long pktCount = framerateL;
-            AVPacket pkt = null;
             try {
                 while (pktCount > 0) {
                     grabber.grabPacket();
@@ -389,6 +367,13 @@ public class ConvertVideoPakcet {
                 if (pkt.stream_index() == videoStreamIndex) {
                     //把需要解码的视频帧送进解码器
                     logger.info("closeRelationMap---------->{}", closeRelationMap);
+                    // Allocate video frame
+                    pFrame = av_frame_alloc();
+                    // Allocate an AVFrame structure
+                    outFrameRGB = av_frame_alloc();
+                    outFrameRGB.width(width);
+                    outFrameRGB.height(height);
+                    outFrameRGB.format(AV_PIX_FMT_BGR24);
                     //Send video packet to be decoding
                     if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                         //Receive decoded video frame
@@ -483,7 +468,7 @@ public class ConvertVideoPakcet {
                                                             //清空map
                                                             closeRelationMap.clear();
                                                             long pushPktCount = (videoLength + 2) * framerateL;
-                                                            while (pushPktCount > 0){
+                                                            while (pushPktCount > 0) {
                                                                 grabber.grabPacket();
                                                                 pushPktCount--;
                                                             }
@@ -571,6 +556,12 @@ public class ConvertVideoPakcet {
                 logger.error("analizy video error :" + e);
             } finally {
                 av_packet_unref(pkt);
+                av_free(pFrame);// Free the YUV frame
+                av_free(outFrameRGB);// Free the RGB image
+
+                pkt = null;
+                pFrame = null;
+                outFrameRGB = null;
             }
             logger.info("analizy one second end ");
             //获取单个视频帧结束

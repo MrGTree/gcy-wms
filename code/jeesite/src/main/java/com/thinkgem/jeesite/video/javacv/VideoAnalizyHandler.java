@@ -5,7 +5,6 @@ import java.util.Set;
 
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import org.bytedeco.javacv.FrameGrabber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,15 +56,9 @@ public class VideoAnalizyHandler implements Runnable {
         } finally {
             if (convertVideoPakcet != null) {
                 if (convertVideoPakcet.grabber != null) {
-                    try {
-                        convertVideoPakcet.grabber.stop();
-                        convertVideoPakcet.grabber.close();
-                        convertVideoPakcet.grabber.release();
-                    } catch (FrameGrabber.Exception e) {
-                        logger.error("convertVideoPakcet.grabber.stop :", e);
-                    }
+                    convertVideoPakcet.freeAndClose();
                 }
-                if (convertVideoPakcet.detector !=null){
+                if (convertVideoPakcet.detector != null) {
                     convertVideoPakcet.detector.release();
                 }
                 convertVideoPakcet.grabber = null;
