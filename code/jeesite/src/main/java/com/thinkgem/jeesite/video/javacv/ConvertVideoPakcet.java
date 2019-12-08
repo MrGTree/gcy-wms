@@ -1,9 +1,13 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
 import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
@@ -77,11 +81,14 @@ public class ConvertVideoPakcet {
     protected int audiocodecid;
     protected int codecid;
     protected double framerate;// 帧率
+    protected long framerateL = 25;
     protected int bitrate;// 比特率
 
     private UrlMapper urlMapper;
     private Float useScore;
     private Float tooCloseValue;
+    private long videoLength;
+
 
     public ConvertVideoPakcet() {
     }
@@ -104,6 +111,7 @@ public class ConvertVideoPakcet {
         modelPath = Global.getModelPath();
         tooCloseValue = Global.getTooCloseValue();
         useScore = Global.getUseScore();
+        videoLength = Global.getPushVideoLong();
         try {
             detector = new StCrowdDensityDetector(modelPath);
         } catch (StFaceException e) {
@@ -116,7 +124,6 @@ public class ConvertVideoPakcet {
     private AVCodecContext pCodecCtx;//编解码上下文
     private SwsContext sws_ctx;//图像缩放和像素格式转换上下文
     private AVFrame outFrameRGB;//用于存储转换后的RGB像素数据，默认转换成RGB
-    private AVPacket packet;//临时的未解码的视频帧数据
     private AVFrame pFrame;//临时的视频帧解码后的图像像素数据，默认yuv420
 
     /**
@@ -140,7 +147,6 @@ public class ConvertVideoPakcet {
         }
         // 视频参数
         audiocodecid = grabber.getAudioCodec();
-        logger.debug("{} audiocodecid is {},width is {},heigth is {}", src, audiocodecid, width, height);
         codecid = grabber.getVideoCodec();
         framerate = grabber.getVideoFrameRate();// 帧率
         bitrate = grabber.getVideoBitrate();// 比特率
@@ -153,7 +159,8 @@ public class ConvertVideoPakcet {
         }
         initGrabber(src, AV_PIX_FMT_BGR24);
         Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
-        convertVideoPakcetMap.put(urlMapper,this);
+        convertVideoPakcetMap.put(urlMapper, this);
+        logger.info("{} audiocodecid is {},width is {},heigth is {},framerate is {}", src, audiocodecid, width, height,framerate);
         return this;
     }
 
@@ -168,9 +175,6 @@ public class ConvertVideoPakcet {
      * free all struct
      */
     public void freeAndClose() {
-        if (packet != null) {
-            av_packet_unref(packet);// Free the packet that was allocated by av_read_frame
-        }
         if (pFrame != null) {
             av_free(pFrame);// Free the YUV frame
         }
@@ -227,8 +231,6 @@ public class ConvertVideoPakcet {
         //scaling/conversion operations by using sws_scale().
         DoublePointer param = null;
         sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height, fmt, SWS_FAST_BILINEAR, null, null, param);
-
-        packet = new AVPacket();
 
         // Allocate video frame
         pFrame = av_frame_alloc();
@@ -355,22 +357,29 @@ public class ConvertVideoPakcet {
 
         long no_frame_index = 0;
         //for循环获取视频帧
-        for (; err_index < 1; ) {
-            if (no_frame_index > 40){
+        for (; err_index < 5; ) {
+            if (no_frame_index > 40) {
                 try {
                     grabber.restart();
+                    logger.error("{},grabber.restart ",urlMapper.getInputUrl());
                     no_frame_index = 0;
                 } catch (Exception e) {
                     err_index++;
                     logger.error("analizy video error :" + e);
                 }
             }
-            //获取分析开始，总时间需要一秒
-            long startTime = System.currentTimeMillis();
+            //获取分析开始，总时间需要一
+            long pktCount = framerateL;
             AVPacket pkt = null;
             try {
-                //没有解码的音视频帧
+                while (pktCount > 0) {
+                    grabber.grabPacket();
+                    pktCount--;
+                }
+                grabber.flush();
                 pkt = grabber.grabPacket();
+                //没有解码的音视频帧
+
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
                     //空包记录次数跳过
                     no_frame_index++;
@@ -379,7 +388,7 @@ public class ConvertVideoPakcet {
                 }
                 if (pkt.stream_index() == videoStreamIndex) {
                     //把需要解码的视频帧送进解码器
-                    logger.error("closeRelationMap---------->{}", closeRelationMap);
+                    logger.info("closeRelationMap---------->{}", closeRelationMap);
                     //Send video packet to be decoding
                     if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                         //Receive decoded video frame
@@ -407,7 +416,8 @@ public class ConvertVideoPakcet {
                                     for (int j = 0; j < keypoints.length; j++) {
                                         float[] pointsScore = crowdResult.getPointsScore();
                                         float score = pointsScore[j];
-                                        if (score > useScore) {
+                                        if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
+                                                urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
                                             manList.add(new Man(keypoints[j].x, keypoints[j].y));
                                         }
                                     }
@@ -447,7 +457,7 @@ public class ConvertVideoPakcet {
                                                         int time = closeManOn.getTime();
                                                         if (time >= 6) {
                                                             //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
-                                                            logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
+                                                            logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
                                                             ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
 //                                                            PushBreakRuleVideo pushBreakRuleVideo = null;
 //                                                            try {
@@ -469,9 +479,15 @@ public class ConvertVideoPakcet {
 //                                                                    pushBreakRuleVideo=null;
 //                                                                }
 //                                                            }
-                                                            new FFmpegShellPushVideo(urlMapper).pushBreakRuleVideo();
+                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
                                                             //清空map
                                                             closeRelationMap.clear();
+                                                            long pushPktCount = (videoLength + 2) * framerateL;
+                                                            while (pushPktCount > 0){
+                                                                grabber.grabPacket();
+                                                                pushPktCount--;
+                                                            }
+                                                            grabber.flush();
                                                             break manLoop;
                                                         } else {
                                                             //时间小了
@@ -554,21 +570,10 @@ public class ConvertVideoPakcet {
                 err_index++;
                 logger.error("analizy video error :" + e);
             } finally {
-                av_free_packet(pkt);
-                pkt = null;
+                av_packet_unref(pkt);
             }
             logger.info("analizy one second end ");
             //获取单个视频帧结束
-            long endTime = System.currentTimeMillis();
-            long timeSleep = 1000 - (endTime - startTime);
-            if (timeSleep > 10) {
-                try {
-                    Thread.sleep(timeSleep);
-                } catch (InterruptedException e) {
-                    logger.error("analizy video Thread sleep error :" + e);
-                    Thread.currentThread().interrupt();
-                }
-            }
         }
         logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
