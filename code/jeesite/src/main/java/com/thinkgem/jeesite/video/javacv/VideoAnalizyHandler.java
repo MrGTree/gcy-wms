@@ -1,13 +1,13 @@
 package com.thinkgem.jeesite.video.javacv;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
 
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.bytedeco.javacv.FrameGrabber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 商户缓存信息更新执行线程
@@ -22,10 +22,6 @@ public class VideoAnalizyHandler implements Runnable {
     /**
      * 平台商户编号
      */
-
-    @Autowired
-    private RevicedListCollection rc;
-
     private UrlMapper urlMapper;
 
     public VideoAnalizyHandler() {
@@ -46,13 +42,12 @@ public class VideoAnalizyHandler implements Runnable {
         try {
             if (convertVideoPakcet == null || convertVideoPakcet.grabber == null) {
                 convertVideoPakcet = new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl());
-                rc.setRevicedList(convertVideoPakcet);
                 logger.debug("new ConvertVideoPakcet end");
             } else {
                 convertVideoPakcet.grabber.restart();
                 logger.debug("new ConvertVideoPakcet grabber restart");
             }
-            //convertVideoPakcet.go();
+            convertVideoPakcet.go();
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:", e);
 
