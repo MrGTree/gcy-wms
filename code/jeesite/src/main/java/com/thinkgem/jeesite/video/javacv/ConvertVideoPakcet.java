@@ -1,7 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -358,7 +357,16 @@ public class ConvertVideoPakcet {
 
         long no_frame_index = 0;
         //for循环获取视频帧
-        for (; no_frame_index < 20 && err_index < 1; ) {
+        for (; err_index < 1; ) {
+            if (no_frame_index > 40){
+                try {
+                    grabber.restart();
+                    no_frame_index = 0;
+                } catch (Exception e) {
+                    err_index++;
+                    logger.error("analizy video error :" + e);
+                }
+            }
             //获取分析开始，总时间需要一秒
             long startTime = System.currentTimeMillis();
             AVPacket pkt = null;
@@ -542,9 +550,6 @@ public class ConvertVideoPakcet {
                     no_frame_index++;
                 }
             } catch (Exception e) {
-                err_index++;
-                logger.error("analizy video error :" + e);
-            } catch (IOException e) {
                 err_index++;
                 logger.error("analizy video error :" + e);
             } catch (StFaceException e) {

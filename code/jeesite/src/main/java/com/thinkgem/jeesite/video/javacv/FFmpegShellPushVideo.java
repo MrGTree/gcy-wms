@@ -30,7 +30,7 @@ public class FFmpegShellPushVideo {
         try {
             Thread.sleep(1000 * Global.getPushVideoLong());
         } catch (InterruptedException e) {
-            logger.error("FFmpegShellPushVideo pushBreakRuleVideo sleep error :" + e);
+            logger.info("FFmpegShellPushVideo pushBreakRuleVideo sleep error :" + e);
             Thread.currentThread().interrupt();
         }
 
