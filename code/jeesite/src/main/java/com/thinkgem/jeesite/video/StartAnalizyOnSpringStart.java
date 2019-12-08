@@ -2,6 +2,9 @@ package com.thinkgem.jeesite.video;
 
 
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
 import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
@@ -11,6 +14,7 @@ import com.thinkgem.jeesite.common.utils.FileUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.VideoAnalizyGoHandler;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.opencv.core.Core;
@@ -33,6 +37,7 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
@@ -69,6 +74,7 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
                 for (UrlMapper urlMapper : urlMappers) {
                     urlMappers.remove(urlMapper);
                     threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapper));
+                    threadPoolTaskExecutor.execute(new VideoAnalizyGoHandler());
                 }
 
             }

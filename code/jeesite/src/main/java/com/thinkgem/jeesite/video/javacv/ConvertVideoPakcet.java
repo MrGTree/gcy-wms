@@ -1,11 +1,7 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.bytedeco.ffmpeg.global.avcodec.av_free_packet;
 import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
@@ -70,6 +66,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class ConvertVideoPakcet {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
+
+    private List<ConvertVideoPakcet> revicedList = new ArrayList<>();
 
     FFmpegFrameGrabber grabber = null;
     int width = -1, height = -1;
