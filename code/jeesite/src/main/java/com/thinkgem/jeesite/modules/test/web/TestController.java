@@ -65,6 +65,19 @@ public class TestController extends BaseController {
      * @return
      * @throws JsonProcessingException
      */
+    @RequestMapping(value = "status")
+    @ResponseBody
+    public String status(){
+        return "ok";
+    }
+
+    /**
+     * 测试录制
+     * * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
     @RequestMapping(value = "record")
     @ResponseBody
     public String record() throws IOException {

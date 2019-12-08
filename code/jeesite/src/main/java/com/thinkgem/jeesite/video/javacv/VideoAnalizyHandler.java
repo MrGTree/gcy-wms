@@ -5,6 +5,7 @@ import java.util.Set;
 
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import org.bytedeco.javacv.FrameGrabber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,29 +37,41 @@ public class VideoAnalizyHandler implements Runnable {
         logger.debug(threadName + " monitor start update");
         Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
         ConvertVideoPakcet convertVideoPakcet = convertVideoPakcetMap.get(urlMapper);
+        logger.debug("convertVideoPakcetMap : {}", convertVideoPakcetMap);
+        logger.debug("convertVideoPakcet : {}", convertVideoPakcet);
         try {
-            if (convertVideoPakcet == null) {
+            if (convertVideoPakcet == null || convertVideoPakcet.grabber == null) {
                 convertVideoPakcet = new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl());
-                convertVideoPakcetMap.put(urlMapper, convertVideoPakcet);
+                logger.debug("new ConvertVideoPakcet end");
             } else {
                 convertVideoPakcet.grabber.restart();
+                logger.debug("new ConvertVideoPakcet grabber restart");
             }
+            convertVideoPakcet.go();
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:", e);
 
             Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
             urlMappers.add(urlMapper);
+            convertVideoPakcetMap.remove(urlMapper);
         } finally {
             if (convertVideoPakcet != null) {
-                convertVideoPakcet.freeAndClose();
-                if (convertVideoPakcet.detector != null) {
+                if (convertVideoPakcet.grabber != null) {
+                    try {
+                        convertVideoPakcet.grabber.stop();
+                        convertVideoPakcet.grabber.close();
+                        convertVideoPakcet.grabber.release();
+                    } catch (FrameGrabber.Exception e) {
+                        logger.error("convertVideoPakcet.grabber.stop :", e);
+                    }
+                }
+                if (convertVideoPakcet.detector !=null){
                     convertVideoPakcet.detector.release();
                 }
                 convertVideoPakcet.grabber = null;
             }
-            convertVideoPakcetMap.remove(urlMapper);
         }
-        convertVideoPakcet.go();
     }
+
 }
 
