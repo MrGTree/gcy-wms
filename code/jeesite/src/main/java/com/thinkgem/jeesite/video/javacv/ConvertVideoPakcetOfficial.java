@@ -1,10 +1,7 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +12,6 @@ import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StImageFormat;
-import com.sensetime.ad.sdk.StLibrary;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
@@ -27,15 +23,17 @@ import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber;
 import org.bytedeco.javacv.FrameGrabber.Exception;
-import org.bytedeco.javacv.Java2DFrameConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  *  * rtsp转rtmp（转封装方式）
- *  * @author eguid
+ *  * @author
+ *
+ * office  7min 4.2G 250 cpu
  *  
  */
 public class ConvertVideoPakcetOfficial {
@@ -49,9 +47,10 @@ public class ConvertVideoPakcetOfficial {
     private UrlMapper urlMapper;
     private Float useScore;
     private Float tooCloseValue;
+    protected long framerateL = 25;
+    private long videoLength;
 
-    Java2DFrameConverter javaconverter = new Java2DFrameConverter();
-    StCrowdDensityDetector detector ;
+    StCrowdDensityDetector detector;
 
 
     public ConvertVideoPakcetOfficial() {
@@ -67,13 +66,30 @@ public class ConvertVideoPakcetOfficial {
         modelPath = Global.getModelPath();
         tooCloseValue = Global.getTooCloseValue();
         useScore = Global.getUseScore();
+        videoLength = Global.getPushVideoLong();
         try {
             detector = new StCrowdDensityDetector(modelPath);
         } catch (StFaceException e) {
-            logger.error("new StCrowdDensityDetector",e);
+            logger.error("new StCrowdDensityDetector", e);
         }
     }
 
+
+    /**
+     * free all struct
+     */
+    public void freeAndClose() {
+        if (grabber != null) {
+            try {
+                grabber.stop();
+                grabber.release();
+                grabber.close();
+                grabber = null;
+            } catch (Exception e) {
+                logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
+            }
+        }
+    }
 
     /**
      *   * 选择视频源
@@ -94,9 +110,8 @@ public class ConvertVideoPakcetOfficial {
             width = grabber.getImageWidth();
             height = grabber.getImageHeight();
         }
-        grabber.setTimeout(10000);
-        grabber.setOption("timeout", String.valueOf(10000));
-        grabber.setCloseInputStream(true);
+        //RGB 图片模式
+        grabber.setImageMode(FrameGrabber.ImageMode.GRAY);
         // 视频参数
         logger.debug("{} ,width is {},heigth is {}", src, width, height);
         Map<UrlMapper, ConvertVideoPakcetOfficial> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
@@ -126,54 +141,44 @@ public class ConvertVideoPakcetOfficial {
 
         long no_frame_index = 0;
         //for循环获取视频帧
-        for (; err_index < 1; ) {
-            //获取分析开始，总时间需要一秒
-            long startTime = System.currentTimeMillis();
+        for (; err_index < 5; ) {
             if (no_frame_index > 40) {
                 logger.error("{},no_frame_index:{},grabber.restart", no_frame_index, urlMapper.getInputUrl());
                 try {
                     grabber.restart();
+                    logger.info("{},grabber.restart ", urlMapper.getInputUrl());
                     no_frame_index = 0;
                 } catch (Exception e) {
                     err_index++;
                     logger.error("analizy video error :" + e);
                 }
             }
-            Frame imageFrame = null;
-            ByteArrayOutputStream out = null;
-            byte[] bytes = null;
-            BufferedImage bufferedImage = null;
-
+            //获取分析开始，总时间需要一秒
+            long pktCount = framerateL;
             try {
+                grabber.trigger();
+                grabber.flush();
+                while (pktCount > 0) {
+                    grabber.grabImage();
+                    pktCount--;
+                }
                 //没有解码的音视频帧
-                imageFrame = grabber.grabImage();
-                if (imageFrame == null) {
+                Frame imageFrame = grabber.grabImage();
+                if (imageFrame == null || imageFrame.image.length <= 0 || imageFrame.image[0] == null) {
                     //空包记录次数跳过
                     no_frame_index++;
                     logger.debug("analizy no_frame_index is:{}", no_frame_index);
                     continue;
                 }
-                bufferedImage = javaconverter.convert(imageFrame);
-                out = new ByteArrayOutputStream();
-                if (bufferedImage == null) {
-                    no_frame_index++;
-                    continue;
-                }
-                ImageIO.write(bufferedImage, "jpg", out);
-                int[] width1 = new int[1];
-                width1[0] = width;
-                int[] height1 = new int[1];
-                height1[0] = height;
-                out.flush();
-                bytes = StLibrary.stGetBgrDataFromImageBuffer(out.toByteArray(), width1, height1);
-                if (bytes.length <= 0) {
-                    no_frame_index++;
-                    continue;
-                }
+                ByteBuffer imagebuffer = (ByteBuffer) imageFrame.image[0];
+                imagebuffer.flip();
+                //6 根据缓冲区的数据长度创建相应大小的byte数组，接收缓冲区的数据
+                byte[] bytes = new byte[imagebuffer.remaining()];
+                //7 接收缓冲区数据
+                imagebuffer.get(bytes);
                 //把需要解码的视频帧送进解码器
                 logger.info("closeRelationMap---------->{}", closeRelationMap);
                 StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-
                 logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
                 //大与两个人
                 if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
@@ -184,7 +189,8 @@ public class ConvertVideoPakcetOfficial {
                         for (int j = 0; j < keypoints.length; j++) {
                             float[] pointsScore = crowdResult.getPointsScore();
                             float score = pointsScore[j];
-                            if (score > useScore) {
+                            if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
+                                    urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
                                 manList.add(new Man(keypoints[j].x, keypoints[j].y));
                             }
                         }
@@ -225,10 +231,18 @@ public class ConvertVideoPakcetOfficial {
                                             if (time >= 6) {
                                                 //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
                                                 logger.error("analizy break the rule !!!WARNING! this man {} too close with {} last {} ,distance is {}", manOut, manIn, time + 1, distance);
+                                                //另起线程推消息,存图片
                                                 ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                                new FFmpegShellPushVideo(urlMapper).pushBreakRuleVideo();
+                                                //另起线程，录制视频
+                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
                                                 //清空map
                                                 closeRelationMap.clear();
+                                                //轮空跑
+                                                long pushPktCount = videoLength * framerateL;
+                                                while (pushPktCount > 0) {
+                                                    grabber.grabImage();
+                                                    pushPktCount--;
+                                                }
                                                 break manLoop;
                                             } else {
                                                 //时间小了
@@ -303,37 +317,13 @@ public class ConvertVideoPakcetOfficial {
             } catch (Exception e) {
                 err_index++;
                 logger.error("analizy video error :" + e);
-            } catch (IOException e) {
-                err_index++;
-                logger.error("analizy video error :" + e);
             } catch (StFaceException e) {
                 err_index++;
                 logger.error("analizy video error :" + e);
             } finally {
-                bytes = null;
-                imageFrame = null;
-                bufferedImage = null;
-                if (out != null) {
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        logger.error("close out:", e);
-                    }
-                    out = null;
-                }
+
             }
             logger.info("analizy one second end ");
-            //获取单个视频帧结束
-            long endTime = System.currentTimeMillis();
-            long timeSleep = 1000 - (endTime - startTime);
-            if (timeSleep > 10) {
-                try {
-                    Thread.sleep(timeSleep);
-                } catch (InterruptedException e) {
-                    logger.info("analizy video Thread sleep error :" + e);
-                    Thread.currentThread().interrupt();
-                }
-            }
         }
         logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
