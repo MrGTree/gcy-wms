@@ -1,13 +1,14 @@
 package com.thinkgem.jeesite.video.javacv;
 
-import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShell1To;
-import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShellFrom;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.JavaShellUtils;
 import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShell1To;
+import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShellFrom;
 
 public class FFmpegShellPushVideo {
 
@@ -22,20 +23,21 @@ public class FFmpegShellPushVideo {
     public FFmpegShellPushVideo() {
     }
 
-    public void pushBreakRuleVideo(){
+    public void pushBreakRuleVideo() {
         logger.info("pushBreakRuleVideo go go go  start ");
-        String s = pushVideoShellFrom + urlMapper.getInputUrl() + pushVideoShell1To + urlMapper.getOutPutUrl();
-        Process execute = JavaShellUtils.execute(s);
-
+        Process execute = null;
         try {
+            String s = pushVideoShellFrom + urlMapper.getInputUrl() + pushVideoShell1To + urlMapper.getOutPutUrl();
+            execute = JavaShellUtils.execute(s);
             Thread.sleep(1000 * Global.getPushVideoLong());
         } catch (InterruptedException e) {
             logger.info("FFmpegShellPushVideo pushBreakRuleVideo sleep error :" + e);
             Thread.currentThread().interrupt();
+        } finally {
+            if (execute != null) {
+                execute.destroy();
+            }
         }
-
-        execute.destroy();
         logger.info("pushBreakRuleVideo go go go end ");
-
     }
 }
