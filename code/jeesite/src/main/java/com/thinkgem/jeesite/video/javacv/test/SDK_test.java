@@ -7,6 +7,7 @@ import com.sensetime.ad.sdk.StImageFormat;
 import com.sensetime.ad.sdk.StLibrary;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -71,11 +72,17 @@ public class SDK_test {
             System.out.println("Number of keypoints: " + crowdResult.getKeypointCount());
             System.out.println("keypoints coordinator: ");
             StPointF[] pts = crowdResult.getKeypoints();
+            Man man = new Man();
+            Man man1 = new Man();
+            man.setX(crowdResult.getKeypoints()[0].x);
+            man.setY(crowdResult.getKeypoints()[0].y);
+            man1.setY(crowdResult.getKeypoints()[1].y);
+            man1.setY(crowdResult.getKeypoints()[1].y);
             for (StPointF pt : pts) {
                 System.out.println(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
             }
 
-            Mat colorMat = VideoAnalizyUtils.visualize_dmap(mat, crowdResult);
+            Mat colorMat = VideoAnalizyUtils.visualize_dmap(mat, crowdResult,man,man1);
             Imgcodecs.imwrite(RESULT_PATH, colorMat);
         } catch (StFaceException e) {
             e.printStackTrace();

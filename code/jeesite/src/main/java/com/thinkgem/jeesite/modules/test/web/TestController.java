@@ -3,15 +3,6 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
@@ -41,6 +32,16 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 
 /**
  * 测试Controller
@@ -167,11 +168,19 @@ public class TestController extends BaseController {
         logger.debug("Number of keypoints: " + crowdResult.getKeypointCount());
         logger.debug("keypoints coordinator: ");
         StPointF[] pts = crowdResult.getKeypoints();
+
+        Man man = new Man();
+        Man man1 = new Man();
+        man.setX(crowdResult.getKeypoints()[0].x);
+        man.setY(crowdResult.getKeypoints()[0].y);
+        man1.setX(crowdResult.getKeypoints()[1].x);
+        man1.setY(crowdResult.getKeypoints()[1].y);
+
         for (StPointF pt : pts) {
             logger.debug(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
         }
 
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width1[0], height1[0], new Man(1, 2), new Man(2, 4), "123", imageData, crowdResult));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width1[0], height1[0], man, man1, "1", imageData, crowdResult));
 
         if (detector != null) {
             detector.release();
