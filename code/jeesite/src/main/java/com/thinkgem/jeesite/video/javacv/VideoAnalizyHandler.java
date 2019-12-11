@@ -39,14 +39,11 @@ public class VideoAnalizyHandler implements Runnable {
         logger.debug("convertVideoPakcetMap : {}", convertVideoPakcetMap);
         logger.debug("convertVideoPakcet : {}", convertVideoPakcet);
         try {
-            if (convertVideoPakcet == null || convertVideoPakcet.grabber == null) {
-                convertVideoPakcet = new ConvertVideoPakcet(urlMapper).from(urlMapper.getInputUrl());
+            if (convertVideoPakcet == null) {
+                convertVideoPakcet = new ConvertVideoPakcet(urlMapper);
                 logger.debug("new ConvertVideoPakcet end");
-            } else {
-                convertVideoPakcet.grabber.restart();
-                logger.debug("new ConvertVideoPakcet grabber restart");
             }
-            convertVideoPakcet.go();
+            convertVideoPakcet.from(urlMapper.getInputUrl()).go();
         } catch (Exception e) {
             logger.error(threadName + " monitor fail:", e);
 
@@ -55,13 +52,10 @@ public class VideoAnalizyHandler implements Runnable {
             convertVideoPakcetMap.remove(urlMapper);
         } finally {
             if (convertVideoPakcet != null) {
-                if (convertVideoPakcet.grabber != null) {
-                    convertVideoPakcet.freeAndClose();
-                }
+                convertVideoPakcet.freeAndClose();
                 if (convertVideoPakcet.detector != null) {
                     convertVideoPakcet.detector.release();
                 }
-                convertVideoPakcet.grabber = null;
             }
         }
     }

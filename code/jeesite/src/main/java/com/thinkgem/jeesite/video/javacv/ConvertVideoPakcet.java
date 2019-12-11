@@ -4,7 +4,6 @@ package com.thinkgem.jeesite.video.javacv;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,11 +15,15 @@ import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_send_packet;
+import static org.bytedeco.ffmpeg.global.avformat.av_read_frame;
 import static org.bytedeco.ffmpeg.global.avformat.avformat_close_input;
 import static org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info;
+import static org.bytedeco.ffmpeg.global.avformat.avformat_network_init;
 import static org.bytedeco.ffmpeg.global.avformat.avformat_open_input;
 import static org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_VIDEO;
 import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24;
+import static org.bytedeco.ffmpeg.global.avutil.av_dict_free;
+import static org.bytedeco.ffmpeg.global.avutil.av_dict_set;
 import static org.bytedeco.ffmpeg.global.avutil.av_frame_alloc;
 import static org.bytedeco.ffmpeg.global.avutil.av_frame_free;
 import static org.bytedeco.ffmpeg.global.avutil.av_free;
@@ -54,11 +57,10 @@ import org.bytedeco.ffmpeg.avformat.AVFormatContext;
 import org.bytedeco.ffmpeg.avformat.AVStream;
 import org.bytedeco.ffmpeg.avutil.AVDictionary;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
+import org.bytedeco.ffmpeg.avutil.AVRational;
 import org.bytedeco.ffmpeg.swscale.SwsContext;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.DoublePointer;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -72,21 +74,13 @@ public class ConvertVideoPakcet {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private List<ConvertVideoPakcet> revicedList = new ArrayList<>();
-
-    FFmpegFrameGrabber grabber = null;
     int width = -1, height = -1;
-    // 视频参数
-    protected int audiocodecid;
-    protected int codecid;
-    protected double framerate;// 帧率
-    protected long framerateL = 25;
-    protected int bitrate;// 比特率
 
     private UrlMapper urlMapper;
     private Float useScore;
     private Float tooCloseValue;
     private long videoLength;
+    protected long framerate;// 帧率
 
 
     public ConvertVideoPakcet() {
@@ -96,17 +90,13 @@ public class ConvertVideoPakcet {
         this.urlMapper = urlMapper;
     }
 
-    // 音频参数
-    // 想要录制音频，这三个参数必须有：audioChannels > 0 && audioBitrate > 0 && sampleRate > 0
-    private int audioChannels;
-    private int audioBitrate;
-    private int sampleRate;
     private String modelPath;
 
 
     StCrowdDensityDetector detector;
 
     {
+        avformat_network_init();
         modelPath = Global.getModelPath();
         tooCloseValue = Global.getTooCloseValue();
         useScore = Global.getUseScore();
@@ -134,34 +124,13 @@ public class ConvertVideoPakcet {
      *   * @throws Exception
      *  
      */
-    public ConvertVideoPakcet from(String src) throws Exception {
+    public ConvertVideoPakcet from(String src) {
         logger.debug("monitor from url:{}" + src);
         // 采集/抓取器
-        grabber = new FFmpegFrameGrabber(src);
-        if (hasRTSP(src)) {
-            grabber.setOption("rtsp_transport", "tcp");
-        }
-        grabber.start();// 开始之后ffmpeg会采集视频信息，之后就可以获取音视频信息
-        if (width < 0 || height < 0) {
-            width = grabber.getImageWidth();
-            height = grabber.getImageHeight();
-        }
-        // 视频参数
-        audiocodecid = grabber.getAudioCodec();
-        codecid = grabber.getVideoCodec();
-        framerate = grabber.getVideoFrameRate();// 帧率
-        bitrate = grabber.getVideoBitrate();// 比特率
-        // 音频参数
-        // 想要录制音频，这三个参数必须有：audioChannels > 0 && audioBitrate > 0 && sampleRate > 0
-        audioChannels = grabber.getAudioChannels();
-        audioBitrate = grabber.getAudioBitrate();
-        if (audioBitrate < 1) {
-            audioBitrate = 128 * 1000;// 默认音频比特率
-        }
         initGrabber(src, AV_PIX_FMT_BGR24);
         Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
         convertVideoPakcetMap.put(urlMapper, this);
-        logger.info("{} audiocodecid is {},width is {},heigth is {},framerate is {}", src, audiocodecid, width, height, framerate);
+        logger.info("{} audiocodecid is {},width is {},heigth is {},framerate is {}", src, width, height);
         return this;
     }
 
@@ -177,17 +146,12 @@ public class ConvertVideoPakcet {
      */
     public void freeAndClose() {
         avcodec_close(pCodecCtx);// Close the codec
+        pCodecCtx.close();
         sws_freeContext(sws_ctx);//Free SwsContext
-        if (grabber != null) {
-            try {
-                grabber.stop();
-                grabber.release();
-                grabber.close();
-                grabber = null;
-            } catch (Exception e) {
-                logger.error("{}stop grabber error:", urlMapper.getInputUrl(), e);
-            }
-        }
+        sws_ctx.close();
+        avformat_close_input(pFormatCtx);// Close the video file
+        pFormatCtx.close();
+
     }
 
     /**
@@ -215,12 +179,12 @@ public class ConvertVideoPakcet {
         width = pCodecCtx.width();
         height = pCodecCtx.height();
 
+        pkt = new AVPacket();
+
         //scaling/conversion operations by using sws_scale().
         DoublePointer param = null;
         sws_ctx = sws_getContext(width, height, pCodecCtx.pix_fmt(), width, height, AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, null, null, param);
 
-        avformat_close_input(pFormatCtx);// Close the video file
-        pFormatCtx = null;
         return true;
     }
 
@@ -233,7 +197,18 @@ public class ConvertVideoPakcet {
      */
     protected AVFormatContext openInput(String url) throws FileNotOpenException {
         AVFormatContext pFormatCtx = new AVFormatContext(null);
-        if (avformat_open_input(pFormatCtx, url, null, null) == 0) {
+
+        AVDictionary options = new AVDictionary(null);
+        av_dict_set(options, "fflags", "nobuffer", 0);
+        if (hasRTSP(url)) {
+            av_dict_set(options, "rtsp_transport", "tcp", 0);
+        }
+        if (avformat_open_input(pFormatCtx, url, null, options) == 0) {
+            // pFormatCtx->probesize = 20000000;
+            //    pFormatCtx->max_analyze_duration = 2000;
+            pFormatCtx.probesize(20000000);
+            pFormatCtx.max_analyze_duration(2000);
+            av_dict_free(options);
             return pFormatCtx;
         }
         throw new FileNotOpenException("Didn't open video file");
@@ -313,6 +288,13 @@ public class ConvertVideoPakcet {
             // Get a pointer to the codec context for the video stream
             AVStream stream = formatCtx.streams(videoStreamIndex);
 //			AVCodecContext pCodecCtx = stream.codec();
+            AVRational r = stream.avg_frame_rate();
+            if (r.num() == 0 && r.den() == 0) {
+                r = stream.r_frame_rate();
+            }
+            framerate = new Double(r.num() / r.den()).longValue();
+
+            r.close();
             AVCodecParameters codecParam = stream.codecpar();
             return codecParam;
         }
@@ -336,206 +318,191 @@ public class ConvertVideoPakcet {
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
         long no_frame_index = 0;
+        long pktCount = framerate;
         //for循环获取视频帧
         for (; err_index < 5; ) {
             if (no_frame_index > 40) {
-                try {
-                    grabber.restart();
-                    logger.info("{},grabber.restart ", urlMapper.getInputUrl());
-                    no_frame_index = 0;
-                } catch (Exception e) {
-                    err_index++;
-                    logger.error("analizy video error :" + e);
-                }
+                logger.error("AVFormatContext no_frame_index !!!");
+                avformat_close_input(pFormatCtx);// Close the video file
+                pFormatCtx.close();
+                pFormatCtx = openInput(urlMapper.getInputUrl());
             }
             //获取分析开始，总时间需要一
-            long pktCount = framerateL;
             try {
-                grabber.trigger();
-                while (pktCount > 0) {
-                    pkt = grabber.grabPacket();
-                    av_packet_unref(pkt);
-                    pkt = null;
-                    pktCount--;
-                }
+                if (av_read_frame(pFormatCtx, pkt) == 0) {
+                    if (pkt.stream_index() == videoStreamIndex) {
+                        if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
+                            //空包记录次数跳过
+                            no_frame_index++;
+                            logger.debug("analizy no_frame_index is:{}", no_frame_index);
+                            av_packet_unref(pkt);
+                            continue;
+                        }
+                        if (pktCount > 0) {
+                            pktCount--;
+                            continue;
+                        }
+                        pktCount = 25;
+                        //把需要解码的视频帧送进解码器
+                        logger.info("closeRelationMap---------->{}", closeRelationMap);
+                        // Allocate video frame
+                        pFrame = av_frame_alloc();
+                        // Allocate an AVFrame structure
+                        outFrameRGB = av_frame_alloc();
+                        outFrameRGB.width(width);
+                        outFrameRGB.height(height);
+                        outFrameRGB.format(AV_PIX_FMT_BGR24);
+                        //Send video packet to be decoding
+                        if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
+                            //Receive decoded video frame
+                            if (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
+                                //Sucesss.
+                                // Determine required buffer size and allocate buffer
+                                BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
+                                // Assign appropriate parts of buffer to image planes in pFrameRGB.
+                                av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
+                                // Convert the image from its native format to BGR
+                                sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
+                                //Convert BGR to ByteBuffer
+                                byte[] bytes = saveFrame(outFrameRGB, width, height);
 
-                pkt = grabber.grabPacket();
-                //没有解码的音视频帧
+                                av_free(buffer);//free buffer
 
-                if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
-                    //空包记录次数跳过
-                    no_frame_index++;
-                    logger.debug("analizy no_frame_index is:{}", no_frame_index);
-                    continue;
-                }
-                if (pkt.stream_index() == videoStreamIndex) {
-                    //把需要解码的视频帧送进解码器
-                    logger.info("closeRelationMap---------->{}", closeRelationMap);
-                    // Allocate video frame
-                    pFrame = av_frame_alloc();
-                    // Allocate an AVFrame structure
-                    outFrameRGB = av_frame_alloc();
-                    outFrameRGB.width(width);
-                    outFrameRGB.height(height);
-                    outFrameRGB.format(AV_PIX_FMT_BGR24);
-                    //Send video packet to be decoding
-                    if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
-                        //Receive decoded video frame
-                        if (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
-                            //Sucesss.
-                            // Determine required buffer size and allocate buffer
-                            BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
-                            // Assign appropriate parts of buffer to image planes in pFrameRGB.
-                            av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
-                            // Convert the image from its native format to BGR
-                            sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
-                            //Convert BGR to ByteBuffer
-                            byte[] bytes = saveFrame(outFrameRGB, width, height);
-                            av_free(buffer);//free buffer
-                            //获取分析这一视频帧图片
-                            StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
+                                buffer.close();
+                                //获取分析这一视频帧图片
+                                StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
-                            logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
-                            //大与两个人
-                            if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
-                                StPointF[] keypoints = crowdResult.getKeypoints();
-                                //初始化有效的manList
-                                ArrayList<Man> manList = new ArrayList<>();
-                                if (keypoints != null && keypoints.length > 1) {
-                                    for (int j = 0; j < keypoints.length; j++) {
-                                        float[] pointsScore = crowdResult.getPointsScore();
-                                        float score = pointsScore[j];
-                                        if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
-                                                urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
-                                            manList.add(new Man(keypoints[j].x, keypoints[j].y));
-                                        }
-                                    }
-                                }
-                                //初始结束，循环分析
-                                manLoop:
-                                for (Man manOut : manList) {
-                                    for (Man manIn : manList) {
-                                        double distance = Math.sqrt(Math.pow(manOut.getX() - manIn.getX(), 2) + Math.pow(manOut.getY() - manIn.getY(), 2));
-                                        if (distance == 0) {
-                                            continue;
-                                        }
-
-                                        CloseRelation closeRelation = null;
-                                        Man key = null;
-                                        if (closeRelationMap.size() > 0) {
-                                            for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
-                                                key = manCloseRelationEntry.getKey();
-                                                if (manOut.equals(key)) {
-                                                    closeRelation = manCloseRelationEntry.getValue();
-                                                    break;
-                                                }
+                                logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
+                                //大与两个人
+                                if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
+                                    StPointF[] keypoints = crowdResult.getKeypoints();
+                                    //初始化有效的manList
+                                    ArrayList<Man> manList = new ArrayList<>();
+                                    if (keypoints != null && keypoints.length > 1) {
+                                        for (int j = 0; j < keypoints.length; j++) {
+                                            float[] pointsScore = crowdResult.getPointsScore();
+                                            float score = pointsScore[j];
+                                            if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
+                                                    urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
+                                                manList.add(new Man(keypoints[j].x, keypoints[j].y));
                                             }
                                         }
+                                    }
+                                    //初始结束，循环分析
+                                    manLoop:
+                                    for (Man manOut : manList) {
+                                        for (Man manIn : manList) {
+                                            double distance = Math.sqrt(Math.pow(manOut.getX() - manIn.getX(), 2) + Math.pow(manOut.getY() - manIn.getY(), 2));
+                                            if (distance == 0) {
+                                                continue;
+                                            }
 
-                                        //距离小于 200 像素
-                                        if (distance < tooCloseValue) {
-                                            if (closeRelation != null) {
-                                                Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
-                                                if (closeManSet != null && !closeManSet.isEmpty()) {
-                                                    CloseMan closeManOn = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
-                                                    if (closeManOn == null) {
-                                                        CloseMan closeMan = new CloseMan(1, manIn, true);
-                                                        closeManSet.add(closeMan);
-                                                        continue;
-                                                    } else {
-                                                        int time = closeManOn.getTime();
-                                                        if (time >= 6) {
-                                                            //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
-                                                            logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
-                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                                            ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
-                                                            //清空map
-                                                            closeRelationMap.clear();
-                                                            long pushPktCount = videoLength * framerateL;
-                                                            while (pushPktCount > 0) {
-                                                                AVPacket noPkt = grabber.grabPacket();
-                                                                av_packet_unref(noPkt);
-                                                                noPkt = null;
-                                                                pushPktCount--;
-                                                            }
-                                                            break manLoop;
+                                            CloseRelation closeRelation = null;
+                                            Man key = null;
+                                            if (closeRelationMap.size() > 0) {
+                                                for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
+                                                    key = manCloseRelationEntry.getKey();
+                                                    if (manOut.equals(key)) {
+                                                        closeRelation = manCloseRelationEntry.getValue();
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            //距离小于 200 像素
+                                            if (distance < tooCloseValue) {
+                                                if (closeRelation != null) {
+                                                    Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
+                                                    if (closeManSet != null && !closeManSet.isEmpty()) {
+                                                        CloseMan closeManOn = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
+                                                        if (closeManOn == null) {
+                                                            CloseMan closeMan = new CloseMan(1, manIn, true);
+                                                            closeManSet.add(closeMan);
+                                                            continue;
                                                         } else {
-                                                            //时间小了
-                                                            if (closeManOn.isCurrentInc()) {
+                                                            int time = closeManOn.getTime();
+                                                            if (time >= 6) {
+                                                                //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
+                                                                logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
+                                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
+                                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
+                                                                //清空map
+                                                                closeRelationMap.clear();
+                                                                pktCount = videoLength * framerate;
+                                                                break manLoop;
+                                                            } else {
+                                                                //时间小了
+                                                                if (closeManOn.isCurrentInc()) {
+                                                                    continue;
+                                                                }
+                                                                closeManOn.setCurrentInc(true);
+                                                                closeManSet.remove(closeManOn);
+                                                                CloseMan closeMan1 = new CloseMan(time + 1, manIn);
+                                                                closeMan1.setCurrentInc(true);//此次增长标记
+                                                                closeManSet.add(closeMan1);
                                                                 continue;
                                                             }
-                                                            closeManOn.setCurrentInc(true);
-                                                            closeManSet.remove(closeManOn);
-                                                            CloseMan closeMan1 = new CloseMan(time + 1, manIn);
-                                                            closeMan1.setCurrentInc(true);//此次增长标记
-                                                            closeManSet.add(closeMan1);
-                                                            continue;
                                                         }
+                                                    } else {
+                                                        Set<CloseMan> closeManNewSet = new HashSet<>();
+                                                        CloseMan closeMan = new CloseMan(1, manIn, true);
+                                                        closeManNewSet.add(closeMan);
+                                                        continue;
                                                     }
                                                 } else {
                                                     Set<CloseMan> closeManNewSet = new HashSet<>();
                                                     CloseMan closeMan = new CloseMan(1, manIn, true);
                                                     closeManNewSet.add(closeMan);
+                                                    CloseRelation closeRelation1 = new CloseRelation(manOut, closeManNewSet);
+                                                    closeRelationMap.put(manOut, closeRelation1);
                                                     continue;
                                                 }
                                             } else {
-                                                Set<CloseMan> closeManNewSet = new HashSet<>();
-                                                CloseMan closeMan = new CloseMan(1, manIn, true);
-                                                closeManNewSet.add(closeMan);
-                                                CloseRelation closeRelation1 = new CloseRelation(manOut, closeManNewSet);
-                                                closeRelationMap.put(manOut, closeRelation1);
-                                                continue;
-                                            }
-                                        } else {
-                                            //不违规，清数据
-                                            if (closeRelation == null) {
-                                                continue;
-                                            } else {
-                                                Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
-                                                if (closeManSet == null || closeManSet.isEmpty()) {
-                                                    closeRelationMap.remove(key);
+                                                //不违规，清数据
+                                                if (closeRelation == null) {
                                                     continue;
                                                 } else {
-                                                    CloseMan closeMan = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
-                                                    if (closeMan == null) {
+                                                    Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
+                                                    if (closeManSet == null || closeManSet.isEmpty()) {
+                                                        closeRelationMap.remove(key);
                                                         continue;
                                                     } else {
-                                                        closeManSet.remove(closeMan);
-                                                        continue;
+                                                        CloseMan closeMan = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
+                                                        if (closeMan == null) {
+                                                            continue;
+                                                        } else {
+                                                            closeManSet.remove(closeMan);
+                                                            continue;
+                                                        }
                                                     }
+
                                                 }
 
-                                            }
 
-
-                                        }
-                                    }
-
-
-                                }
-                                //循环判断结束，准备下一秒数据
-                                if (closeRelationMap != null && !closeRelationMap.isEmpty()) {
-                                    //这一秒的计步结束，初始化
-                                    for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
-                                        CloseRelation value = manCloseRelationEntry.getValue();
-                                        Set<CloseMan> closeManSet = value.getCloseManSet();
-                                        if (closeManSet != null && !closeManSet.isEmpty()) {
-                                            for (CloseMan closeMan : closeManSet) {
-                                                closeMan.setCurrentInc(false);
                                             }
                                         }
+
+
+                                    }
+                                    //循环判断结束，准备下一秒数据
+                                    if (closeRelationMap != null && !closeRelationMap.isEmpty()) {
+                                        //这一秒的计步结束，初始化
+                                        for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
+                                            CloseRelation value = manCloseRelationEntry.getValue();
+                                            Set<CloseMan> closeManSet = value.getCloseManSet();
+                                            if (closeManSet != null && !closeManSet.isEmpty()) {
+                                                for (CloseMan closeMan : closeManSet) {
+                                                    closeMan.setCurrentInc(false);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
+
                             }
-
                         }
                     }
-                } else {
-                    no_frame_index++;
                 }
-            } catch (Exception e) {
-                err_index++;
-                logger.error("analizy video error :" + e);
             } catch (StFaceException e) {
                 err_index++;
                 logger.error("analizy video error :" + e);
@@ -543,7 +510,6 @@ public class ConvertVideoPakcet {
                 av_packet_unref(pkt);
                 av_frame_free(pFrame);// Free the YUV frame
                 av_frame_free(outFrameRGB);// Free the RGB image
-                pkt = null;
                 pFrame = null;
                 outFrameRGB = null;
             }
