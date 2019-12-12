@@ -1,16 +1,15 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3;
-import static org.bytedeco.ffmpeg.global.avcodec.avcodec_close;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_flush_buffers;
+import static org.bytedeco.ffmpeg.global.avcodec.avcodec_free_context;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_open2;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_to_context;
 import static org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_frame;
@@ -38,12 +37,10 @@ import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StImageFormat;
-import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
@@ -63,7 +60,6 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.DoublePointer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -145,7 +141,7 @@ public class ConvertVideoPakcet {
      * free all struct
      */
     public void freeAndClose() {
-        avcodec_close(pCodecCtx);// Close the codec
+        avcodec_free_context(pCodecCtx);// Close the codec
         pCodecCtx.close();
         sws_freeContext(sws_ctx);//Free SwsContext
         sws_ctx.close();
@@ -310,9 +306,7 @@ public class ConvertVideoPakcet {
      */
 
 
-    public ConvertVideoPakcet go() {
-        long err_index = 0;//采集或推流导致的错误次数
-        //连续五次没有采集到帧则认为视频采集结束，程序错误次数超过1次即中断程序
+    public ConvertVideoPakcet go() throws StFaceException {
         logger.debug("analizy go go go go ");
         //分析时违规记录
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
@@ -320,203 +314,65 @@ public class ConvertVideoPakcet {
         long no_frame_index = 0;
         long pktCount = framerate;
         //for循环获取视频帧
-        for (; err_index < 5; ) {
-            if (no_frame_index > 40) {
-                logger.error("AVFormatContext no_frame_index !!!");
-                avformat_close_input(pFormatCtx);// Close the video file
-                pFormatCtx.close();
-                pFormatCtx = openInput(urlMapper.getInputUrl());
-            }
-            //获取分析开始，总时间需要一
-            try {
-                if (av_read_frame(pFormatCtx, pkt) == 0) {
-                    if (pkt.stream_index() == videoStreamIndex) {
-                        if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
-                            //空包记录次数跳过
-                            no_frame_index++;
-                            logger.debug("analizy no_frame_index is:{}", no_frame_index);
-                            av_packet_unref(pkt);
-                            continue;
-                        }
-                        if (pktCount > 0) {
-                            pktCount--;
-                            continue;
-                        }
-                        pktCount = 25;
-                        //把需要解码的视频帧送进解码器
-                        logger.info("closeRelationMap---------->{}", closeRelationMap);
-                        // Allocate video frame
-                        pFrame = av_frame_alloc();
-                        // Allocate an AVFrame structure
+        while (av_read_frame(pFormatCtx, pkt) == 0) {
+            // Is this a packet from the video stream?
+            if (pkt.stream_index() == videoStreamIndex) {
+                if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
+                    //空包记录次数跳过
+                    av_packet_unref(pkt);
+                    if (no_frame_index > 40) {
+                        break;
+                    } else {
+                        no_frame_index++;
+                        logger.debug("analizy no_frame_index is:{}", no_frame_index);
+                        continue;
+                    }
+                }
+                if (pktCount > 0) {
+                    av_packet_unref(pkt);
+                    pktCount--;
+                    continue;
+                }
+                pktCount = framerate;
+                if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
+                    //Send video packet to be decoding
+                    //Receive decoded video frame
+                    pFrame = av_frame_alloc();
+                    // Allocate an AVFrame structure
+                    if (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
+                        //Sucesss.
                         outFrameRGB = av_frame_alloc();
                         outFrameRGB.width(width);
                         outFrameRGB.height(height);
                         outFrameRGB.format(AV_PIX_FMT_BGR24);
-                        //Send video packet to be decoding
-                        if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
-                            //Receive decoded video frame
-                            if (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
-                                //Sucesss.
-                                // Determine required buffer size and allocate buffer
-                                BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
-                                // Assign appropriate parts of buffer to image planes in pFrameRGB.
-                                av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
-                                // Convert the image from its native format to BGR
-                                sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
-                                //Convert BGR to ByteBuffer
-                                byte[] bytes = saveFrame(outFrameRGB, width, height);
+                        // Determine required buffer size and allocate buffer
+                        BytePointer buffer = new BytePointer(av_malloc(av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1)));
+                        // Assign appropriate parts of buffer to image planes in pFrameRGB.
+                        av_image_fill_arrays(outFrameRGB.data(), outFrameRGB.linesize(), buffer, AV_PIX_FMT_BGR24, width, height, 1);
+                        // Convert the image from its native format to BGR
+                        sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0, height, outFrameRGB.data(), outFrameRGB.linesize());
+                        //Convert BGR to ByteBuffer
+                        byte[] bytes = saveFrame(outFrameRGB, width, height);
+                        av_free(buffer);//free buffer
+                        //获取分析这一视频帧图片
+                        StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
 
-                                av_free(buffer);//free buffer
-
-                                buffer.close();
-                                //获取分析这一视频帧图片
-                                StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-
-                                logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
-                                //大与两个人
-                                if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
-                                    StPointF[] keypoints = crowdResult.getKeypoints();
-                                    //初始化有效的manList
-                                    ArrayList<Man> manList = new ArrayList<>();
-                                    if (keypoints != null && keypoints.length > 1) {
-                                        for (int j = 0; j < keypoints.length; j++) {
-                                            float[] pointsScore = crowdResult.getPointsScore();
-                                            float score = pointsScore[j];
-                                            if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
-                                                    urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
-                                                manList.add(new Man(keypoints[j].x, keypoints[j].y));
-                                            }
-                                        }
-                                    }
-                                    //初始结束，循环分析
-                                    manLoop:
-                                    for (Man manOut : manList) {
-                                        for (Man manIn : manList) {
-                                            double distance = Math.sqrt(Math.pow(manOut.getX() - manIn.getX(), 2) + Math.pow(manOut.getY() - manIn.getY(), 2));
-                                            if (distance == 0) {
-                                                continue;
-                                            }
-
-                                            CloseRelation closeRelation = null;
-                                            Man key = null;
-                                            if (closeRelationMap.size() > 0) {
-                                                for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
-                                                    key = manCloseRelationEntry.getKey();
-                                                    if (manOut.equals(key)) {
-                                                        closeRelation = manCloseRelationEntry.getValue();
-                                                        break;
-                                                    }
-                                                }
-                                            }
-
-                                            //距离小于 200 像素
-                                            if (distance < tooCloseValue) {
-                                                if (closeRelation != null) {
-                                                    Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
-                                                    if (closeManSet != null && !closeManSet.isEmpty()) {
-                                                        CloseMan closeManOn = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
-                                                        if (closeManOn == null) {
-                                                            CloseMan closeMan = new CloseMan(1, manIn, true);
-                                                            closeManSet.add(closeMan);
-                                                            continue;
-                                                        } else {
-                                                            int time = closeManOn.getTime();
-                                                            if (time >= 6) {
-                                                                //违规了，发流等待 5 分钟 manOut + " | " + man + "|" + time + "|" + distance
-                                                                logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
-                                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
-                                                                //清空map
-                                                                closeRelationMap.clear();
-                                                                pktCount = videoLength * framerate;
-                                                                break manLoop;
-                                                            } else {
-                                                                //时间小了
-                                                                if (closeManOn.isCurrentInc()) {
-                                                                    continue;
-                                                                }
-                                                                closeManOn.setCurrentInc(true);
-                                                                closeManSet.remove(closeManOn);
-                                                                CloseMan closeMan1 = new CloseMan(time + 1, manIn);
-                                                                closeMan1.setCurrentInc(true);//此次增长标记
-                                                                closeManSet.add(closeMan1);
-                                                                continue;
-                                                            }
-                                                        }
-                                                    } else {
-                                                        Set<CloseMan> closeManNewSet = new HashSet<>();
-                                                        CloseMan closeMan = new CloseMan(1, manIn, true);
-                                                        closeManNewSet.add(closeMan);
-                                                        continue;
-                                                    }
-                                                } else {
-                                                    Set<CloseMan> closeManNewSet = new HashSet<>();
-                                                    CloseMan closeMan = new CloseMan(1, manIn, true);
-                                                    closeManNewSet.add(closeMan);
-                                                    CloseRelation closeRelation1 = new CloseRelation(manOut, closeManNewSet);
-                                                    closeRelationMap.put(manOut, closeRelation1);
-                                                    continue;
-                                                }
-                                            } else {
-                                                //不违规，清数据
-                                                if (closeRelation == null) {
-                                                    continue;
-                                                } else {
-                                                    Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
-                                                    if (closeManSet == null || closeManSet.isEmpty()) {
-                                                        closeRelationMap.remove(key);
-                                                        continue;
-                                                    } else {
-                                                        CloseMan closeMan = VideoAnalizyUtils.getCloseMan(closeManSet, manIn);
-                                                        if (closeMan == null) {
-                                                            continue;
-                                                        } else {
-                                                            closeManSet.remove(closeMan);
-                                                            continue;
-                                                        }
-                                                    }
-
-                                                }
-
-
-                                            }
-                                        }
-
-
-                                    }
-                                    //循环判断结束，准备下一秒数据
-                                    if (closeRelationMap != null && !closeRelationMap.isEmpty()) {
-                                        //这一秒的计步结束，初始化
-                                        for (Map.Entry<Man, CloseRelation> manCloseRelationEntry : closeRelationMap.entrySet()) {
-                                            CloseRelation value = manCloseRelationEntry.getValue();
-                                            Set<CloseMan> closeManSet = value.getCloseManSet();
-                                            if (closeManSet != null && !closeManSet.isEmpty()) {
-                                                for (CloseMan closeMan : closeManSet) {
-                                                    closeMan.setCurrentInc(false);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
+                        logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
+                        //大与两个人
+                        if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
+                            if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
+                                pktCount = videoLength * framerate;
                             }
                         }
+                        av_frame_free(outFrameRGB);
                     }
+                    av_frame_free(pFrame);
+                    avcodec_flush_buffers(pCodecCtx);
                 }
-            } catch (StFaceException e) {
-                err_index++;
-                logger.error("analizy video error :" + e);
-            } finally {
-                av_packet_unref(pkt);
-                av_frame_free(pFrame);// Free the YUV frame
-                av_frame_free(outFrameRGB);// Free the RGB image
-                pFrame = null;
-                outFrameRGB = null;
             }
-            logger.info("analizy one second end ");
-            //获取单个视频帧结束
+            av_packet_unref(pkt);
         }
-        logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), err_index, no_frame_index);
+        logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), no_frame_index);
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
         urlMappers.add(urlMapper);
         return this;
