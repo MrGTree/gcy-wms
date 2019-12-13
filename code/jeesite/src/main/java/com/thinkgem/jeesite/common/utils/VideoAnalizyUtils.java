@@ -18,7 +18,6 @@ import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.FFmpegShellPushVideo;
 import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.opencv.core.Core;
@@ -99,7 +98,7 @@ public class VideoAnalizyUtils {
                                 if (time >= 6) {
                                     logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
                                     threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                    threadPoolTaskExecutor.execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
+                                    threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper.getInputUrl()));
                                     //清空map
                                     closeRelationMap.clear();
                                     return true;

@@ -234,7 +234,7 @@ public class ConvertVideoPakcetOfficial {
                                                 //另起线程推消息,存图片
                                                 ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
                                                 //另起线程，录制视频
-                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(new FFmpegShellPushVideo(urlMapper)));
+                                                ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new PushVideoHandler(urlMapper.getInputUrl()));
                                                 //清空map
                                                 closeRelationMap.clear();
                                                 //轮空跑

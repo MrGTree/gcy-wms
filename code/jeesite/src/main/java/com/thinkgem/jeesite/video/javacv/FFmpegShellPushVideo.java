@@ -1,20 +1,18 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShell1To;
+import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShellFrom;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.JavaShellUtils;
-import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShell1To;
-import static com.thinkgem.jeesite.common.utils.JavaShellUtils.pushVideoShellFrom;
 
 public class FFmpegShellPushVideo {
 
     private UrlMapper urlMapper;
 
-    private static Logger logger = LoggerFactory.getLogger(VideoAnalizyUtils.class);
+    private static Logger logger = LoggerFactory.getLogger(FFmpegShellPushVideo.class);
 
     public FFmpegShellPushVideo(UrlMapper urlMapper) {
         this.urlMapper = urlMapper;

@@ -7,20 +7,19 @@ public class PushVideoHandler implements Runnable {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private FFmpegShellPushVideo fFmpegShellPushVideo;
+    private String rtmpUrl;
 
-    public PushVideoHandler(FFmpegShellPushVideo fFmpegShellPushVideo) {
-        this.fFmpegShellPushVideo = fFmpegShellPushVideo;
+    public PushVideoHandler(String rtmpUrl) {
+        this.rtmpUrl = rtmpUrl;
     }
 
     public PushVideoHandler() {
     }
 
-
     @Override
     public void run() {
         try {
-            fFmpegShellPushVideo.pushBreakRuleVideo();
+            HttpMethodPushVideo.pushBreakRuleVideo(rtmpUrl);
         } catch (Exception e) {
             logger.error("fFmpegShellPushVideo.pushBreakRuleVideo:", e);
         }
