@@ -27,12 +27,12 @@ public class HttpMethodPushVideo {
 
 
     static {
-        requestMap.put("type", "1");
+        requestMap.put("type", 1);
         requestMap.put("vhost", "__defaultVhost__");
         requestMap.put("app", "normal");
-        requestMap.put("wait_for_record", "0");
+        requestMap.put("wait_for_record", 0);
         requestMap.put("record_time", Global.getPushVideoLong());
-        requestMap.put("continue_record", "0");
+        requestMap.put("continue_record", 0);
     }
 
 
@@ -47,7 +47,9 @@ public class HttpMethodPushVideo {
         //continue_record	Y	流注销时是否继续等待录制还是立即停止录制	0/1
         Map<String, Object> reqMap = new HashMap<>(requestMap);
         reqMap.put("stream", StringUtils.substringAfterLast(rtmpUrl, "/"));
+        logger.info("reqMap:{},pushVideoUrl:{}", reqMap, pushVideoUrl);
         ResponseEntity<PushVideoReturn> response = restTemplate.getForEntity(pushVideoUrl, PushVideoReturn.class, reqMap);
+        logger.info("response:{}", response);
         if (HttpStatus.OK.equals(response.getStatusCode())) {
             PushVideoReturn body = response.getBody();
             if (body.getResult() == 0) {

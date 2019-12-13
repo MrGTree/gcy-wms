@@ -3,6 +3,7 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -153,6 +154,18 @@ public class TestController extends BaseController {
         return "ok";
     }
 
+    /**
+     * 测试通知请求
+     * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "r2Re")
+    @ResponseBody
+    public Object r2Re(HttpServletRequest request)  {
+        return request.getParameterMap();
+    }
 
 
 
