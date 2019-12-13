@@ -1,6 +1,34 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import com.sensetime.ad.core.StCrowdDensityDetector;
+import com.sensetime.ad.core.StFaceException;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
+import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
+import org.bytedeco.ffmpeg.avcodec.AVCodec;
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
+import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
+import org.bytedeco.ffmpeg.avcodec.AVPacket;
+import org.bytedeco.ffmpeg.avformat.AVFormatContext;
+import org.bytedeco.ffmpeg.avformat.AVStream;
+import org.bytedeco.ffmpeg.avutil.AVDictionary;
+import org.bytedeco.ffmpeg.avutil.AVFrame;
+import org.bytedeco.ffmpeg.avutil.AVRational;
+import org.bytedeco.ffmpeg.swscale.SwsContext;
+import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.DoublePointer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -33,33 +61,6 @@ import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
-import com.sensetime.ad.core.StCrowdDensityDetector;
-import com.sensetime.ad.core.StFaceException;
-import com.sensetime.ad.sdk.StCrowdDensityResult;
-import com.sensetime.ad.sdk.StImageFormat;
-import com.thinkgem.jeesite.common.config.Global;
-import com.thinkgem.jeesite.common.mapper.JsonMapper;
-import com.thinkgem.jeesite.common.utils.SpringContextHolder;
-import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
-import com.thinkgem.jeesite.video.javacv.Entity.Man;
-import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
-import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
-import org.bytedeco.ffmpeg.avcodec.AVCodec;
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
-import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
-import org.bytedeco.ffmpeg.avcodec.AVPacket;
-import org.bytedeco.ffmpeg.avformat.AVFormatContext;
-import org.bytedeco.ffmpeg.avformat.AVStream;
-import org.bytedeco.ffmpeg.avutil.AVDictionary;
-import org.bytedeco.ffmpeg.avutil.AVFrame;
-import org.bytedeco.ffmpeg.avutil.AVRational;
-import org.bytedeco.ffmpeg.swscale.SwsContext;
-import org.bytedeco.javacpp.BytePointer;
-import org.bytedeco.javacpp.DoublePointer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -315,6 +316,7 @@ public class ConvertVideoPakcet {
         long pktCount = framerate;
         //for循环获取视频帧
         while (av_read_frame(pFormatCtx, pkt) == 0) {
+            pFormatCtx.flush_packets();
             // Is this a packet from the video stream?
             if (pkt.stream_index() == videoStreamIndex) {
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
@@ -331,6 +333,7 @@ public class ConvertVideoPakcet {
                 if (pktCount > 0) {
                     av_packet_unref(pkt);
                     pktCount--;
+                    logger.debug("pktCount:{}", pktCount);
                     continue;
                 }
                 pktCount = framerate;
@@ -361,7 +364,7 @@ public class ConvertVideoPakcet {
                         //大与两个人
                         if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
                             if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
-                                pktCount = videoLength * framerate;
+                                pktCount = (videoLength * framerate);
                             }
                         }
                         av_frame_free(outFrameRGB);
