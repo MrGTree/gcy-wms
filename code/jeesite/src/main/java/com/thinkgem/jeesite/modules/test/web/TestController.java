@@ -31,8 +31,8 @@ import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.HttpMethodPushVideo;
 import com.thinkgem.jeesite.video.javacv.PushBreakRuleVideo;
+import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import com.thinkgem.jeesite.websocket.WsHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -149,9 +149,9 @@ public class TestController extends BaseController {
      */
     @RequestMapping(value = "r2")
     @ResponseBody
-    public String r2()  {
-        UrlMapper urlMapper = new UrlMapper("rtmp://127.0.0.1:1935/normal/classroom01-camera01", "", "1");
-        HttpMethodPushVideo.pushBreakRuleVideo(urlMapper);
+    public String r2(String url,String camera)  {
+        UrlMapper urlMapper = new UrlMapper(url, "", camera);
+        threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
         return "ok";
     }
 
