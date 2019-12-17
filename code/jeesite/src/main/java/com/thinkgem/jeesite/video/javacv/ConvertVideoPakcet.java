@@ -1,34 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import com.sensetime.ad.core.StCrowdDensityDetector;
-import com.sensetime.ad.core.StFaceException;
-import com.sensetime.ad.sdk.StCrowdDensityResult;
-import com.sensetime.ad.sdk.StImageFormat;
-import com.thinkgem.jeesite.common.config.Global;
-import com.thinkgem.jeesite.common.mapper.JsonMapper;
-import com.thinkgem.jeesite.common.utils.SpringContextHolder;
-import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
-import com.thinkgem.jeesite.video.javacv.Entity.Man;
-import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
-import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
-import org.bytedeco.ffmpeg.avcodec.AVCodec;
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
-import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
-import org.bytedeco.ffmpeg.avcodec.AVPacket;
-import org.bytedeco.ffmpeg.avformat.AVFormatContext;
-import org.bytedeco.ffmpeg.avformat.AVStream;
-import org.bytedeco.ffmpeg.avutil.AVDictionary;
-import org.bytedeco.ffmpeg.avutil.AVFrame;
-import org.bytedeco.ffmpeg.avutil.AVRational;
-import org.bytedeco.ffmpeg.swscale.SwsContext;
-import org.bytedeco.javacpp.BytePointer;
-import org.bytedeco.javacpp.DoublePointer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +33,34 @@ import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
+import com.sensetime.ad.core.StCrowdDensityDetector;
+import com.sensetime.ad.core.StFaceException;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
+import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
+import org.bytedeco.ffmpeg.avcodec.AVCodec;
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
+import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
+import org.bytedeco.ffmpeg.avcodec.AVPacket;
+import org.bytedeco.ffmpeg.avformat.AVFormatContext;
+import org.bytedeco.ffmpeg.avformat.AVInputFormat;
+import org.bytedeco.ffmpeg.avformat.AVStream;
+import org.bytedeco.ffmpeg.avutil.AVDictionary;
+import org.bytedeco.ffmpeg.avutil.AVFrame;
+import org.bytedeco.ffmpeg.avutil.AVRational;
+import org.bytedeco.ffmpeg.swscale.SwsContext;
+import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.DoublePointer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -194,21 +194,23 @@ public class ConvertVideoPakcet {
      */
     protected AVFormatContext openInput(String url) throws FileNotOpenException {
         AVFormatContext pFormatCtx = new AVFormatContext(null);
-
+        AVInputFormat f = null;
+        int ret;
         AVDictionary options = new AVDictionary(null);
         av_dict_set(options, "fflags", "nobuffer", 0);
         if (hasRTSP(url)) {
             av_dict_set(options, "rtsp_transport", "tcp", 0);
         }
-        if (avformat_open_input(pFormatCtx, url, null, options) == 0) {
-            // pFormatCtx->probesize = 20000000;
-            //    pFormatCtx->max_analyze_duration = 2000;
-            pFormatCtx.probesize(20000000);
-            pFormatCtx.max_analyze_duration(2000);
-            av_dict_free(options);
-            return pFormatCtx;
+        if ((ret = avformat_open_input(pFormatCtx, url, f, options)) < 0) {
+            av_dict_set(options, "pixel_format", null, 0);
+            if ((ret = avformat_open_input(pFormatCtx, url, f, options)) < 0) {
+                throw new FileNotOpenException("avformat_open_input() error " + ret + ": Could not open input \"" + url + "\". (Has setFormat() been called?)");
+            }
         }
-        throw new FileNotOpenException("Didn't open video file");
+        pFormatCtx.probesize(20000000);
+        pFormatCtx.max_analyze_duration(2000);
+        av_dict_free(options);
+        return pFormatCtx;
     }
 
     /**
@@ -358,11 +360,13 @@ public class ConvertVideoPakcet {
                         byte[] bytes = saveFrame(outFrameRGB, width, height);
                         av_free(buffer);//free buffer
                         //获取分析这一视频帧图片
-                        StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-
-                        logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
+                        StCrowdDensityResult crowdResult = null;
+                        if (bytes != null && bytes.length > 0) {
+                            crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
+                        }
                         //大与两个人
                         if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
+                            logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
                             if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
                                 pktCount = (videoLength * framerate);
                             }

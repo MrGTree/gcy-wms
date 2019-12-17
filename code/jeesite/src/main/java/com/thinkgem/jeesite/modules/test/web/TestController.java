@@ -150,7 +150,8 @@ public class TestController extends BaseController {
     @RequestMapping(value = "r2")
     @ResponseBody
     public String r2()  {
-        HttpMethodPushVideo.pushBreakRuleVideo("rtmp://127.0.0.1:1935/normal/classroom01-camera01");
+        UrlMapper urlMapper = new UrlMapper("rtmp://127.0.0.1:1935/normal/classroom01-camera01", "", "1");
+        HttpMethodPushVideo.pushBreakRuleVideo(urlMapper);
         return "ok";
     }
 

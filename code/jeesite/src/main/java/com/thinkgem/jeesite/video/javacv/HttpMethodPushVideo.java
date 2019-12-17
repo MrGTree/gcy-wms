@@ -9,6 +9,7 @@ import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.PushVideoReturn;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ public class HttpMethodPushVideo {
 
     private static String pushVideoUrl = Global.getConfig("video.monitor.push.rule.url");
 
+    private static final String[] ports = {"9088","9088","9088","9089","9089","9089","9089","9089","9089","9090","9090","9090","9090","9090","9090"};
 
     static {
         requestMap.put("type", 1);
@@ -36,7 +38,7 @@ public class HttpMethodPushVideo {
     }
 
 
-    public static boolean pushBreakRuleVideo(String rtmpUrl) {
+    public static boolean pushBreakRuleVideo(UrlMapper urlMapper) {
         logger.info("pushBreakRuleVideo go go go  start ");
         //http://127.0.0.1:9088/index/api/startRecord\?type\=1\&vhost\=__defaultVhost__\&app\=normal\&stream\=classroom01-camera01\&wait_for_record\=1\&continue_record\=1\&record_time\=30
         //type	Y	0为hls，1为mp4
@@ -46,10 +48,11 @@ public class HttpMethodPushVideo {
         //wait_for_record	Y	1代表等待流注册后再录制，置0在流未注册时返回失败	0/1
         //continue_record	Y	流注销时是否继续等待录制还是立即停止录制	0/1
         Map<String, Object> reqMap = new HashMap<>(requestMap);
-        reqMap.put("stream", StringUtils.substringAfterLast(rtmpUrl, "/"));
+        reqMap.put("stream", StringUtils.substringAfterLast(urlMapper.getInputUrl(), "/"));
+        reqMap.put("port", ports[Integer.valueOf(urlMapper.getCamerName()) - 1]);
         logger.info("reqMap:{},pushVideoUrl:{}", reqMap, pushVideoUrl);
         ResponseEntity<PushVideoReturn> response = restTemplate.getForEntity(pushVideoUrl, PushVideoReturn.class, reqMap);
-        logger.info("response:{}", response);
+        logger.error("pushBreakRuleVideo response:{}", response);
         if (HttpStatus.OK.equals(response.getStatusCode())) {
             PushVideoReturn body = response.getBody();
             if (body.getResult() == 0) {

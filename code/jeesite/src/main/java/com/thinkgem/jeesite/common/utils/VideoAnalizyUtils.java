@@ -98,7 +98,7 @@ public class VideoAnalizyUtils {
                                 if (time >= 6) {
                                     logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
                                     threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
-                                    threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper.getInputUrl()));
+                                    threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
                                     //清空map
                                     closeRelationMap.clear();
                                     return true;
