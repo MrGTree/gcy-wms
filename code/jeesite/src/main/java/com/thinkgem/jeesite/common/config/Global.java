@@ -143,6 +143,14 @@ public class Global {
 		return getConfig("video.monito.save.image.path");
 	}
 
+	public static String getNormalImagePath() {
+		return getConfig("video.monito.save.image.path.normal");
+	}
+
+	public static String getNormalUrlImagePath() {
+		return getConfig("video.monito.save.image.url");
+	}
+
 	
 	/**
 	 * 是否是演示模式，演示模式下不能修改用户、角色、密码、菜单、授权

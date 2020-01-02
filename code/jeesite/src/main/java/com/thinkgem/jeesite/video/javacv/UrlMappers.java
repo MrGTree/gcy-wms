@@ -8,7 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.fasterxml.jackson.databind.JavaType;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,21 @@ public class UrlMappers {
     @Bean(name = "convertVideoPakcetMap")
     public Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap() {
         return new ConcurrentHashMap<>(32);
+    }
+
+    @Bean(name = "pakcetSet")
+    public Set<VideoToPicture> PakcetSet() {
+        return Collections.newSetFromMap(new ConcurrentHashMap<>(32));
+    }
+
+    @Bean(name = "cameraNameUrlMap")
+    public Map<String, UrlMapper> cameraNameUrlMap() {
+        ConcurrentHashMap<String, UrlMapper> cameraNameUrlMap = new ConcurrentHashMap<>(32);
+        Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
+        for (UrlMapper urlMapper : urlMappers) {
+            cameraNameUrlMap.put(urlMapper.getCamerName(),urlMapper);
+        }
+        return cameraNameUrlMap;
     }
 
     @Bean

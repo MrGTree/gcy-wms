@@ -3,6 +3,7 @@ package com.thinkgem.jeesite.video.javacv;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.bytedeco.ffmpeg.global.avcodec.av_packet_unref;
@@ -78,6 +79,7 @@ public class ConvertVideoPakcet {
     private Float tooCloseValue;
     private long videoLength;
     protected long framerate;// 帧率
+    public volatile  boolean pictureOpen = false;
 
 
     public ConvertVideoPakcet() {
@@ -142,13 +144,18 @@ public class ConvertVideoPakcet {
      * free all struct
      */
     public void freeAndClose() {
-        avcodec_free_context(pCodecCtx);// Close the codec
-        pCodecCtx.close();
-        sws_freeContext(sws_ctx);//Free SwsContext
-        sws_ctx.close();
-        avformat_close_input(pFormatCtx);// Close the video file
-        pFormatCtx.close();
-
+        if (Objects.nonNull(pCodecCtx)) {
+            avcodec_free_context(pCodecCtx);// Close the codec
+            pCodecCtx.close();
+        }
+        if (Objects.nonNull(sws_ctx)) {
+            sws_freeContext(sws_ctx);//Free SwsContext
+            sws_ctx.close();
+        }
+        if (Objects.nonNull(pFormatCtx)) {
+            avformat_close_input(pFormatCtx);// Close the video file
+            pFormatCtx.close();
+        }
     }
 
     /**
@@ -363,6 +370,9 @@ public class ConvertVideoPakcet {
                         StCrowdDensityResult crowdResult = null;
                         if (bytes != null && bytes.length > 0) {
                             crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
+                            if (pictureOpen) {
+                                VideoAnalizyUtils.getPictureAndSend(width, height, urlMapper.getCamerName(), bytes, crowdResult);
+                            }
                         }
                         //大与两个人
                         if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {

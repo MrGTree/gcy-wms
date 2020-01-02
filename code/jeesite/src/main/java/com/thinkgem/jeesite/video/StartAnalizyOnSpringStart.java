@@ -11,6 +11,7 @@ import com.thinkgem.jeesite.common.utils.FileUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.PictureSaveAndSend;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.opencv.core.Core;
@@ -70,6 +71,8 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
                     urlMappers.remove(urlMapper);
                     threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapper));
                 }
+
+                threadPoolTaskExecutor.execute(new PictureSaveAndSend());
 
             }
 

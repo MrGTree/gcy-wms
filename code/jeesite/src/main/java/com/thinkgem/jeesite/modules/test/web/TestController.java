@@ -43,6 +43,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.socket.TextMessage;
 
 /**
  * 测试Controller
@@ -152,6 +153,20 @@ public class TestController extends BaseController {
     public String r2(String url,String camera)  {
         UrlMapper urlMapper = new UrlMapper(url, "", camera);
         threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
+        return "ok";
+    }
+
+    /**
+     * 测试通知请求
+     * a/test/test/websocket
+     *
+     * @return
+     * @throws JsonProcessingException
+     */
+    @RequestMapping(value = "send")
+    @ResponseBody
+    public String send()  {
+        SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage("1234"));
         return "ok";
     }
 

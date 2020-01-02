@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.opencv.core.Core.addWeighted;
@@ -18,6 +19,7 @@ import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
 import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.opencv.core.Core;
@@ -38,6 +40,8 @@ public class VideoAnalizyUtils {
     private static Logger logger = LoggerFactory.getLogger(VideoAnalizyUtils.class);
 
     private static ThreadPoolTaskExecutor threadPoolTaskExecutor = SpringContextHolder.getBean("threadPoolTaskExecutor");
+
+    private static Set<VideoToPicture> videoToPictureSet = SpringContextHolder.getBean("pakcetSet");
 
     private static final Scalar white = new Scalar(255, 255, 255);//白色
     private static final Scalar red = new Scalar(0, 0, 255);//红色
@@ -219,8 +223,12 @@ public class VideoAnalizyUtils {
                         FONT_HERSHEY_SIMPLEX, 1, blue,
                         2, 8, false);
             }
-            Imgproc.circle(vis_dmap, new Point(manIn.getX(), manIn.getY()), 3, red, -1);
-            Imgproc.circle(vis_dmap, new Point(manOut.getX(), manOut.getY()), 3, red, -1);
+            if (Objects.nonNull(manIn)) {
+                Imgproc.circle(vis_dmap, new Point(manIn.getX(), manIn.getY()), 3, red, -1);
+            }
+            if (Objects.nonNull(manOut)) {
+                Imgproc.circle(vis_dmap, new Point(manOut.getX(), manOut.getY()), 3, red, -1);
+            }
             logger.info("visualize_dmap ... end ....");
             return vis_dmap;
         } finally {
@@ -237,5 +245,9 @@ public class VideoAnalizyUtils {
                 base_img = null;
             }
         }
+    }
+
+    public static void getPictureAndSend(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
+        videoToPictureSet.add(new VideoToPicture(width, height, camerName, bytes, crowdResult));
     }
 }

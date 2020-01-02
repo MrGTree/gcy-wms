@@ -5,6 +5,7 @@
    <title>webSocket 入门示例</title>
     
       <script type="text/javascript">
+         var ws = null;
          function WebSocketTest()
          {
             if ("WebSocket" in window)
@@ -12,11 +13,11 @@
                alert("您的浏览器支持 WebSocket!");
                
                // 打开一个 web socket 连接
-         var ws = new WebSocket("ws://127.0.0.1:8081/wsHandler");
+         ws = new WebSocket("ws://127.0.0.1:8081/WsPictureHandler");
          // Web Socket 已连接上，使用 send() 方法发送数据
                ws.onopen = function()
                {
-                  ws.send("发送数据");
+                  ws.send("1");
                   alert("数据发送中...");
                };
                 //接收数据后
@@ -27,7 +28,8 @@
                };
                // 关闭 websocket 后
                ws.onclose = function()
-               { 
+               {
+                  ws.send("连接已关闭!!!!");
                   alert("连接已关闭..."); 
                };
             }
