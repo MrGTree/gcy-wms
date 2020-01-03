@@ -1,5 +1,25 @@
 package com.thinkgem.jeesite.common.utils;
 
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StPointF;
+import com.thinkgem.jeesite.video.javacv.BreakRulePushMessage;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
+import com.thinkgem.jeesite.video.javacv.PictureSaveAndSend;
+import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
+import org.apache.commons.collections.CollectionUtils;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -12,24 +32,6 @@ import static org.opencv.core.CvType.CV_32F;
 import static org.opencv.core.CvType.CV_8UC3;
 import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
 import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
-import com.sensetime.ad.sdk.StCrowdDensityResult;
-import com.sensetime.ad.sdk.StPointF;
-import com.thinkgem.jeesite.video.javacv.BreakRulePushMessage;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
-import com.thinkgem.jeesite.video.javacv.Entity.Man;
-import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
-import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
-import org.apache.commons.collections.CollectionUtils;
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.imgproc.Imgproc;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * @author liuji
@@ -46,6 +48,8 @@ public class VideoAnalizyUtils {
     private static final Scalar white = new Scalar(255, 255, 255);//白色
     private static final Scalar red = new Scalar(0, 0, 255);//红色
     private static final Scalar blue = new Scalar(255, 0, 0);//蓝色
+
+    public  static  volatile  boolean pictureThreadOpen = false;
 
 
     public static List<Man> crowdResultToManList(StCrowdDensityResult crowdResult, UrlMapper urlMapper, Float useScore) {
@@ -249,5 +253,10 @@ public class VideoAnalizyUtils {
 
     public static void getPictureAndSend(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
         videoToPictureSet.add(new VideoToPicture(width, height, camerName, bytes, crowdResult));
+        if (!pictureThreadOpen){
+            logger.error("pictureThreadOpen -------------,camerName:{}",camerName);
+            threadPoolTaskExecutor.execute(new PictureSaveAndSend());
+            pictureThreadOpen = true;
+        }
     }
 }

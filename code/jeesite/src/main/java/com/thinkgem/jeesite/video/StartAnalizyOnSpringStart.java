@@ -1,17 +1,12 @@
 package com.thinkgem.jeesite.video;
 
 
-import java.util.Set;
-
-import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
-import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
 import com.sensetime.ad.sdk.StLibrary;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.FileUtils;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.PictureSaveAndSend;
 import com.thinkgem.jeesite.video.javacv.VideoAnalizyHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.opencv.core.Core;
@@ -23,6 +18,11 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
+
+import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
+import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
 
 /**
  * 项目启动时就开启线程分析视频是否违规
@@ -71,8 +71,6 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
                     urlMappers.remove(urlMapper);
                     threadPoolTaskExecutor.execute(new VideoAnalizyHandler(urlMapper));
                 }
-
-                threadPoolTaskExecutor.execute(new PictureSaveAndSend());
 
             }
 
