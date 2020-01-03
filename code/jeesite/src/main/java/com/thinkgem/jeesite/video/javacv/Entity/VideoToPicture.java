@@ -1,9 +1,9 @@
 package com.thinkgem.jeesite.video.javacv.Entity;
 
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+
 import java.util.Arrays;
 import java.util.Objects;
-
-import com.sensetime.ad.sdk.StCrowdDensityResult;
 
 public class VideoToPicture {
 
@@ -81,5 +81,16 @@ public class VideoToPicture {
         int result = Objects.hash(width, height, camerName, crowdResult);
         result = 31 * result + Arrays.hashCode(bytes);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "VideoToPicture{" +
+                "width=" + width +
+                ", height=" + height +
+                ", camerName='" + camerName + '\'' +
+                ", bytes=" + Arrays.toString(bytes) +
+                ", crowdResult=" + crowdResult +
+                '}';
     }
 }

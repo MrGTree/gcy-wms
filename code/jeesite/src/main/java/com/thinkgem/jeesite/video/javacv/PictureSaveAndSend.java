@@ -31,47 +31,47 @@ public class PictureSaveAndSend implements Runnable {
 
     @Override
     public void run() {
-        for (VideoToPicture videoToPicture : videoToPictureSet) {
-            videoToPictureSet.remove(videoToPicture);
-            String threadName = Thread.currentThread().getName();
-            logger.debug("{} PictureSaveAndSend start ,camerName:{}", threadName, videoToPicture.getCamerName());
-            Date date = new Date();
-            Mat image1 = null;
-            Mat colorMat = null;
-            String fileName = "";
-            try {
-                //保存图片
-                image1 = new Mat(videoToPicture.getHeight(), videoToPicture.getWidth(), CvType.CV_8UC3);
-                image1.put(0, 0, videoToPicture.getBytes());
-                colorMat = VideoAnalizyUtils.visualize_dmap(image1, videoToPicture.getCrowdResult(), null, null);
-                String dateStr = DateUtils.getDate("yyyy-MM-dd-HH:mm:ss");
-                fileName = Global.getNormalImagePath() + videoToPicture.getCamerName() + "_" + dateStr + "_" + IdGen.uuid() + ".jpg";
-                Imgcodecs.imwrite(fileName, colorMat);
-                logger.info("save image success,camerName:{},fileName:{}", videoToPicture.getCamerName(), fileName);
-            } catch (Exception e) {
-                logger.error("{} save image fail:", videoToPicture.getCamerName(), e);
-            } finally {
-                if (image1 != null) {
-                    image1.release();
-                    image1 = null;
+        while (VideoAnalizyUtils.pictureThreadOpen) {
+            for (VideoToPicture videoToPicture : videoToPictureSet) {
+                videoToPictureSet.remove(videoToPicture);
+                String threadName = Thread.currentThread().getName();
+                logger.error("{} PictureSaveAndSend start ,camerName:{},videoToPicture:{}", threadName, videoToPicture.getCamerName(),videoToPicture);
+                Date date = new Date();
+                Mat image1 = null;
+                Mat colorMat = null;
+                String fileName = "";
+                try {
+                    //保存图片
+                    image1 = new Mat(videoToPicture.getHeight(), videoToPicture.getWidth(), CvType.CV_8UC3);
+                    image1.put(0, 0, videoToPicture.getBytes());
+                    colorMat = VideoAnalizyUtils.visualize_dmap(image1, videoToPicture.getCrowdResult(), null, null);
+                    String dateStr = DateUtils.getDate("yyyy-MM-dd-HH:mm:ss");
+                    fileName = Global.getNormalImagePath() + videoToPicture.getCamerName() + "_" + dateStr + "_" + IdGen.uuid() + ".jpg";
+                    Imgcodecs.imwrite(fileName, colorMat);
+                    logger.info("save image success,camerName:{},fileName:{}", videoToPicture.getCamerName(), fileName);
+                } catch (Exception e) {
+                    logger.error("{} save image fail:", videoToPicture.getCamerName(), e);
+                } finally {
+                    if (image1 != null) {
+                        image1.release();
+                        image1 = null;
+                    }
+                    if (colorMat != null) {
+                        colorMat.release();
+                        colorMat = null;
+                    }
                 }
-                if (colorMat != null) {
-                    colorMat.release();
-                    colorMat = null;
-                }
-            }
 
-            try {
-                //推送通知
-                Map<String, Object> messageSend = new HashMap<>();
-                messageSend.put("imageUrl", Global.getNormalUrlImagePath() + fileName);
-                SpringContextHolder.getBean(WsPictureHandler.class).sendMessageToCameraUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)), videoToPicture.getCamerName());
-            } catch (Exception e) {
-                logger.error("{} send message fail:", videoToPicture.getCamerName(), e);
+                try {
+                    //推送通知
+                    Map<String, Object> messageSend = new HashMap<>();
+                    messageSend.put("imageUrl", Global.getNormalUrlImagePath() + fileName);
+                    SpringContextHolder.getBean(WsPictureHandler.class).sendMessageToCameraUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)), videoToPicture.getCamerName());
+                } catch (Exception e) {
+                    logger.error("{} send message fail:", videoToPicture.getCamerName(), e);
+                }
+                logger.debug("{} BreakRulePushMessage end ,camerName:{}", threadName, videoToPicture.getCamerName());
             }
-            logger.debug("{} BreakRulePushMessage end ,camerName:{}", threadName, videoToPicture.getCamerName());
         }
-        VideoAnalizyUtils.pictureThreadOpen = false;
-
     }
 }
