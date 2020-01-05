@@ -7,6 +7,7 @@ import com.thinkgem.jeesite.common.utils.DateUtils;
 import com.thinkgem.jeesite.common.utils.IdGen;
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.DeskCreamer;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.MessageSend;
 import com.thinkgem.jeesite.video.javacv.Entity.RuleBreak;
@@ -88,6 +89,11 @@ public class BreakRulePushMessage implements Runnable {
             messageSend.setMessageType(MESSAGE_TYPE_1);
             messageSend.setMessageValue(ruleBreak);
             SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)));
+            //获取坐标，找到指定的摄像头（ip），发送通知
+            DeskCreamer deskCreamer = DeskCreamerUtil.calcAndGetDeskCreamer(camerName, width, height);
+            HttpApi.sendGet(deskCreamer);
+
+
         } catch (Exception e) {
             logger.error("{} send message fail:", camerName, e);
         }
