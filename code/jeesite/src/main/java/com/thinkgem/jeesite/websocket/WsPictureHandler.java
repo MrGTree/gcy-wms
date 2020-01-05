@@ -1,10 +1,19 @@
 package com.thinkgem.jeesite.websocket;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
-import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.ConvertVideoPakcet;
+import com.thinkgem.jeesite.video.javacv.ConvertVideoPakcetPicture;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.PictureSaveAndSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +25,6 @@ import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 @Component
 public class WsPictureHandler extends TextWebSocketHandler {
 
@@ -33,11 +35,16 @@ public class WsPictureHandler extends TextWebSocketHandler {
 
     private final static Map<String, List<WebSocketSession>> cameraUsers;
 
-    private final static Map<WebSocketSession,String> sessionCamera;
+    private final static Map<WebSocketSession, String> sessionCamera;
 
     Map<String, UrlMapper> cameraNameUrlMap = SpringContextHolder.getBean("cameraNameUrlMap");
 
     Map<UrlMapper, ConvertVideoPakcet> convertVideoPakcetMap = SpringContextHolder.getBean("convertVideoPakcetMap");
+
+    Set<String> cameraStatus = SpringContextHolder.getBean("cameraStatus");
+
+    Map<String, ConvertVideoPakcetPicture> ConvertVideoPakcetPictureMap = SpringContextHolder.getBean("ConvertVideoPakcetPictureMap");
+
 
     static {
         cameraUsers = new ConcurrentHashMap<>();
@@ -57,7 +64,7 @@ public class WsPictureHandler extends TextWebSocketHandler {
         if (message instanceof TextMessage) {
             String cameraName = String.valueOf(message.getPayload());
             //String cameraName = JsonMapper.getInstance().fromJson(messageStr, String.class);
-            sessionCamera.put(session,cameraName);
+            sessionCamera.put(session, cameraName);
             List<WebSocketSession> webSocketSessions = cameraUsers.get(cameraName);
             if (Objects.isNull(webSocketSessions)) {
                 webSocketSessions = new CopyOnWriteArrayList<>();
@@ -66,9 +73,9 @@ public class WsPictureHandler extends TextWebSocketHandler {
             webSocketSessions.add(session);
 
             UrlMapper urlMapper = cameraNameUrlMap.get(cameraName);
-            ConvertVideoPakcet convertVideoPakcet = convertVideoPakcetMap.get(urlMapper);
-            if (convertVideoPakcet != null){
-                convertVideoPakcet.pictureOpen = true;
+            if (!cameraStatus.contains(cameraName)) {
+                threadPoolTaskExecutor.execute(new PictureSaveAndSend(urlMapper));
+                cameraStatus.add(cameraName);
             }
         }
         super.handleMessage(session, message);
@@ -88,22 +95,22 @@ public class WsPictureHandler extends TextWebSocketHandler {
         super.afterConnectionClosed(session, closeStatus);
     }
 
-    private void pictureThreadOpen(WebSocketSession session){
+    private void pictureThreadOpen(WebSocketSession session) {
+        logger.error("pictureThreadOpen,session:{}", session);
         String cameraName = sessionCamera.get(session);
         sessionCamera.remove(session);
-        if (StringUtils.isNotEmpty(cameraName)){
+        if (StringUtils.isNotEmpty(cameraName)) {
             List<WebSocketSession> webSocketSessions = cameraUsers.get(cameraName);
             if (webSocketSessions != null && !webSocketSessions.isEmpty()) {
                 webSocketSessions.remove(session);
             }
             if (webSocketSessions == null || webSocketSessions.isEmpty()) {
-                UrlMapper urlMapper = cameraNameUrlMap.get(cameraName);
-                ConvertVideoPakcet convertVideoPakcet = convertVideoPakcetMap.get(urlMapper);
-                convertVideoPakcet.pictureOpen = false;
+                ConvertVideoPakcetPicture convertVideoPakcetPicture = ConvertVideoPakcetPictureMap.get(cameraName);
+                if (convertVideoPakcetPicture != null){
+                    convertVideoPakcetPicture.cameraOpen = false;
+                }
+                cameraStatus.remove(cameraName);
             }
-        }
-        if (sessionCamera.isEmpty()){
-            VideoAnalizyUtils.pictureThreadOpen = false;
         }
     }
 
@@ -121,6 +128,7 @@ public class WsPictureHandler extends TextWebSocketHandler {
                 } else {
                     users.remove(user);
                     sessionCamera.remove(user);
+                    pictureThreadOpen(user);
                 }
             } catch (IOException e) {
                 logger.error("send message error", e);

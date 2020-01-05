@@ -1,7 +1,21 @@
 package com.thinkgem.jeesite.common.utils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.opencv.core.Core.addWeighted;
+import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.core.CvType.CV_8UC3;
+import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
+import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StPointF;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
 import com.thinkgem.jeesite.video.javacv.BreakRulePushMessage;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
 import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
@@ -10,28 +24,19 @@ import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
 import com.thinkgem.jeesite.video.javacv.PictureSaveAndSend;
 import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
+import com.thinkgem.jeesite.websocket.WsPictureHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import static org.opencv.core.Core.addWeighted;
-import static org.opencv.core.CvType.CV_32F;
-import static org.opencv.core.CvType.CV_8UC3;
-import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
-import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
+import org.springframework.web.socket.TextMessage;
 
 /**
  * @author liuji
@@ -49,7 +54,45 @@ public class VideoAnalizyUtils {
     private static final Scalar red = new Scalar(0, 0, 255);//红色
     private static final Scalar blue = new Scalar(255, 0, 0);//蓝色
 
-    public  static  volatile  boolean pictureThreadOpen = false;
+    public static volatile boolean pictureThreadOpen = false;
+
+    public static void sendPicture(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
+        Mat image1 = null;
+        Mat colorMat = null;
+        String picName = "";
+        try {
+            //保存图片
+            image1 = new Mat(height, width, CvType.CV_8UC3);
+            image1.put(0, 0, bytes);
+            colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
+            String dateStr = DateUtils.getDate("yyyy-MM-dd-HH:mm:ss");
+            picName = camerName + "_" + dateStr + "_" + IdGen.uuid() + ".jpg";
+            String fileName = Global.getNormalImagePath() + picName;
+            Imgcodecs.imwrite(fileName, colorMat);
+            logger.info("save image success,camerName:{},fileName:{}", camerName, fileName);
+        } catch (Exception e) {
+            logger.error("{} save image fail:", camerName, e);
+        } finally {
+            if (image1 != null) {
+                image1.release();
+                image1 = null;
+            }
+            if (colorMat != null) {
+                colorMat.release();
+                colorMat = null;
+            }
+        }
+
+        try {
+            //推送通知
+            Map<String, Object> messageSend = new HashMap<>();
+            messageSend.put("imageUrl", Global.getNormalUrlImagePath() + picName);
+            SpringContextHolder.getBean(WsPictureHandler.class).sendMessageToCameraUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)), camerName);
+        } catch (Exception e) {
+            logger.error("{} send message fail:", camerName, e);
+        }
+        logger.debug("BreakRulePushMessage end ,camerName:{}", camerName);
+    }
 
 
     public static List<Man> crowdResultToManList(StCrowdDensityResult crowdResult, UrlMapper urlMapper, Float useScore) {
@@ -227,11 +270,59 @@ public class VideoAnalizyUtils {
                         FONT_HERSHEY_SIMPLEX, 1, blue,
                         2, 8, false);
             }
-            if (Objects.nonNull(manIn)) {
-                Imgproc.circle(vis_dmap, new Point(manIn.getX(), manIn.getY()), 3, red, -1);
+            Imgproc.circle(vis_dmap, new Point(manIn.getX(), manIn.getY()), 3, red, -1);
+            Imgproc.circle(vis_dmap, new Point(manOut.getX(), manOut.getY()), 3, red, -1);
+            logger.info("visualize_dmap ... end ....");
+            return vis_dmap;
+        } finally {
+            if (dmap != null) {
+                dmap.release();
+                dmap = null;
             }
-            if (Objects.nonNull(manOut)) {
-                Imgproc.circle(vis_dmap, new Point(manOut.getX(), manOut.getY()), 3, red, -1);
+            if (color_dmap != null) {
+                color_dmap.release();
+                color_dmap = null;
+            }
+            if (base_img != null) {
+                base_img.release();
+                base_img = null;
+            }
+        }
+    }
+
+    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result) {
+        Mat dmap = null;
+        Mat color_dmap = null;
+        Mat base_img = null;
+        try {
+            dmap = new Mat(crowd_result.getHeight(), crowd_result.getWidth(), CV_32F);
+            dmap.put(0, 0, crowd_result.getDensityMap());
+            // normalize dmap
+            Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(dmap);
+            dmap = dmap.mul(dmap, 1 / minMaxLoc.maxVal);
+            dmap.convertTo(dmap, CV_8UC3, 255);
+            // gen color map and resize
+            color_dmap = new Mat();
+            Imgproc.applyColorMap(dmap, color_dmap, COLORMAP_JET);
+            Imgproc.resize(color_dmap, color_dmap, ori_img.size());
+            // add weight for visualize
+            Mat vis_dmap = new Mat(ori_img.rows(), ori_img.cols(), ori_img.type());
+            base_img = ori_img.clone();
+
+            float alpha = 0.5f;
+            addWeighted(color_dmap, alpha, base_img, 1 - alpha, 0, vis_dmap);
+
+            // draw keypoint
+            StPointF[] pts = crowd_result.getKeypoints();
+            for (int i = 0; i < crowd_result.getKeypointCount(); ++i) {
+                Imgproc.circle(
+                        vis_dmap,
+                        new Point(pts[i].x, pts[i].y),
+                        3, white, -1);
+                Imgproc.putText(vis_dmap, String.format("%.2f", crowd_result.getPointsScore()[i]),
+                        new Point(pts[i].x, pts[i].y - 5),
+                        FONT_HERSHEY_SIMPLEX, 1, blue,
+                        2, 8, false);
             }
             logger.info("visualize_dmap ... end ....");
             return vis_dmap;
@@ -251,12 +342,13 @@ public class VideoAnalizyUtils {
         }
     }
 
+
     public static void getPictureAndSend(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
         videoToPictureSet.add(new VideoToPicture(width, height, camerName, bytes, crowdResult));
-        if (!pictureThreadOpen){
-            logger.error("pictureThreadOpen -------------,camerName:{}",camerName);
-            threadPoolTaskExecutor.execute(new PictureSaveAndSend());
+        if (!pictureThreadOpen) {
+            logger.error("pictureThreadOpen -------------,camerName:{}", camerName);
             pictureThreadOpen = true;
+            threadPoolTaskExecutor.execute(new PictureSaveAndSend());
         }
     }
 }

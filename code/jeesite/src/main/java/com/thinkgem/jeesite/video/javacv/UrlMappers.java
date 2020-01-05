@@ -46,6 +46,16 @@ public class UrlMappers {
         return new ConcurrentHashMap<>(32);
     }
 
+    @Bean(name = "ConvertVideoPakcetPictureMap")
+    public Map<String, ConvertVideoPakcetPicture> ConvertVideoPakcetPictureMap() {
+        return new ConcurrentHashMap<>(32);
+    }
+
+    @Bean(name = "cameraStatus")
+    public Set<String> cameraStatus() {
+        return Collections.newSetFromMap(new ConcurrentHashMap<>(32));
+    }
+
     @Bean(name = "pakcetSet")
     public Set<VideoToPicture> PakcetSet() {
         return Collections.newSetFromMap(new ConcurrentHashMap<>(32));
