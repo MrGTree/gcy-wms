@@ -79,8 +79,6 @@ public class ConvertVideoPakcet {
     private Float tooCloseValue;
     private long videoLength;
     protected long framerate;// 帧率
-    public volatile  boolean pictureOpen = false;
-
 
     public ConvertVideoPakcet() {
     }
@@ -322,10 +320,9 @@ public class ConvertVideoPakcet {
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
         long no_frame_index = 0;
-        long pktCount = framerate;
+        long pktCount = 0;
         //for循环获取视频帧
         while (av_read_frame(pFormatCtx, pkt) == 0) {
-            pFormatCtx.flush_packets();
             // Is this a packet from the video stream?
             if (pkt.stream_index() == videoStreamIndex) {
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
@@ -339,13 +336,6 @@ public class ConvertVideoPakcet {
                         continue;
                     }
                 }
-                if (pktCount > 0) {
-                    av_packet_unref(pkt);
-                    pktCount--;
-                    logger.debug("pktCount:{}", pktCount);
-                    continue;
-                }
-                pktCount = framerate;
                 if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                     //Send video packet to be decoding
                     //Receive decoded video frame
@@ -370,17 +360,25 @@ public class ConvertVideoPakcet {
                         StCrowdDensityResult crowdResult = null;
                         if (bytes != null && bytes.length > 0) {
                             crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-                            if (pictureOpen) {
-                                VideoAnalizyUtils.getPictureAndSend(width, height, urlMapper.getCamerName(), bytes, crowdResult);
+                            //大与两个人
+                            if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
+                                logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
+                                if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
+                                    pktCount = (videoLength * framerate);
+                                }else {
+                                    pktCount = framerate;
+                                }
+                            }else {
+                                pktCount = framerate;
                             }
-                        }
-                        //大与两个人
-                        if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
-                            logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
-                            if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
-                                pktCount = (videoLength * framerate);
+                            if (pktCount > 0) {
+                                av_packet_unref(pkt);
+                                pFormatCtx.flush_packets();
+                                av_read_frame(pFormatCtx, pkt);
+                                pktCount--;
                             }
-                        }
+                         }
+
                         av_frame_free(outFrameRGB);
                     }
                     av_frame_free(pFrame);
@@ -388,6 +386,7 @@ public class ConvertVideoPakcet {
                 }
             }
             av_packet_unref(pkt);
+            pFormatCtx.flush_packets();
         }
         logger.info("{}go loop finish !!!,err_index:{},no_frame_index:{}", urlMapper.getInputUrl(), no_frame_index);
         Set<UrlMapper> urlMappers = SpringContextHolder.getBean("urlMapperSet");
