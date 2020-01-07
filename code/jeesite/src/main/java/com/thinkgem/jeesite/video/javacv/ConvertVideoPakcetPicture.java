@@ -1,6 +1,32 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import com.sensetime.ad.core.StCrowdDensityDetector;
+import com.sensetime.ad.core.StFaceException;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
+import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
+import org.bytedeco.ffmpeg.avcodec.AVCodec;
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
+import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
+import org.bytedeco.ffmpeg.avcodec.AVPacket;
+import org.bytedeco.ffmpeg.avformat.AVFormatContext;
+import org.bytedeco.ffmpeg.avformat.AVInputFormat;
+import org.bytedeco.ffmpeg.avformat.AVStream;
+import org.bytedeco.ffmpeg.avutil.AVDictionary;
+import org.bytedeco.ffmpeg.avutil.AVFrame;
+import org.bytedeco.ffmpeg.avutil.AVRational;
+import org.bytedeco.ffmpeg.swscale.SwsContext;
+import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.DoublePointer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.Objects;
 
@@ -32,31 +58,6 @@ import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
-import com.sensetime.ad.core.StCrowdDensityDetector;
-import com.sensetime.ad.core.StFaceException;
-import com.sensetime.ad.sdk.StCrowdDensityResult;
-import com.sensetime.ad.sdk.StImageFormat;
-import com.thinkgem.jeesite.common.config.Global;
-import com.thinkgem.jeesite.common.utils.SpringContextHolder;
-import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
-import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
-import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
-import org.bytedeco.ffmpeg.avcodec.AVCodec;
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
-import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
-import org.bytedeco.ffmpeg.avcodec.AVPacket;
-import org.bytedeco.ffmpeg.avformat.AVFormatContext;
-import org.bytedeco.ffmpeg.avformat.AVInputFormat;
-import org.bytedeco.ffmpeg.avformat.AVStream;
-import org.bytedeco.ffmpeg.avutil.AVDictionary;
-import org.bytedeco.ffmpeg.avutil.AVFrame;
-import org.bytedeco.ffmpeg.avutil.AVRational;
-import org.bytedeco.ffmpeg.swscale.SwsContext;
-import org.bytedeco.javacpp.BytePointer;
-import org.bytedeco.javacpp.DoublePointer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -309,10 +310,9 @@ public class ConvertVideoPakcetPicture {
         logger.error("analizy go go go go ");
         //分析时违规记录
         long no_frame_index = 0;
-        long pktCount = framerate;
+        long pktCount = 0;
         //for循环获取视频帧
         while ( cameraOpen && av_read_frame(pFormatCtx, pkt) == 0) {
-            pFormatCtx.flush_packets();
             // Is this a packet from the video stream?
             if (pkt.stream_index() == videoStreamIndex) {
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
@@ -326,13 +326,6 @@ public class ConvertVideoPakcetPicture {
                         continue;
                     }
                 }
-                if (pktCount > 0) {
-                    av_packet_unref(pkt);
-                    pktCount--;
-                    logger.info("pktCount:{}", pktCount);
-                    continue;
-                }
-                pktCount = framerate;
                 logger.error("packet one second picture........");
                 if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                     //Send video packet to be decoding
@@ -360,6 +353,12 @@ public class ConvertVideoPakcetPicture {
                             crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
                             logger.error("ready sendPicture.....");
                             VideoAnalizyUtils.sendPicture(width, height, urlMapper.getCamerName(), bytes, crowdResult);
+                            pktCount = framerate;
+                            if (pktCount > 0) {
+                                av_packet_unref(pkt);
+                                av_read_frame(pFormatCtx, pkt);
+                                pktCount--;
+                            }
                         }
                         //大与两个人
                         av_frame_free(outFrameRGB);
@@ -369,6 +368,7 @@ public class ConvertVideoPakcetPicture {
                 }
             }
             av_packet_unref(pkt);
+            pFormatCtx.flush_packets();
         }
         logger.error("{}go loop finish !!!,cameraOpen:{}", urlMapper.getInputUrl(), cameraOpen);
         return this;
