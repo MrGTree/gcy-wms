@@ -1,6 +1,7 @@
 package com.thinkgem.jeesite.video.javacv;
 
 import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
 import com.thinkgem.jeesite.common.utils.DateUtils;
@@ -89,9 +90,11 @@ public class BreakRulePushMessage implements Runnable {
             messageSend.setMessageType(MESSAGE_TYPE_1);
             messageSend.setMessageValue(ruleBreak);
             SpringContextHolder.getBean(WsHandler.class).sendMessageToUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)));
-            //获取坐标，找到指定的摄像头（ip），发送通知
-            DeskCreamer deskCreamer = DeskCreamerUtil.calcAndGetDeskCreamer(camerName, width, height);
-            HttpApi.sendGet(deskCreamer);
+            //获取两个人坐标，找到指定的摄像头（ip），发送通知
+            HttpApi.sendGet(DeskCreamerUtil.calcAndGetDeskCreamer(camerName, manIn.getX(), manIn.getY()));
+            HttpApi.sendGet(DeskCreamerUtil.calcAndGetDeskCreamer(camerName, manOut.getX(), manOut.getY()));
+
+
 
 
         } catch (Exception e) {

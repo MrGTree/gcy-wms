@@ -1,26 +1,32 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkgem.jeesite.video.javacv.Entity.DeskCreamer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 
 public class HttpApi {
 
-    private static String uri = "http://127.0.0.1:9088/index/api/addStreamProxy?vhost=__defaultVhost__&app=normal";
+    private static Logger logger = LoggerFactory.getLogger(HttpApi.class);
+
+    private static final String[] ports = {"9088","9089","9090"};
+
+    private static String uri = "http://192.168.1.250";
 
     public static void sendGet(DeskCreamer dc) throws Exception {
         try {
+            int i = Integer.parseInt(dc.getDeskNo()) % 3;
+            uri += ":" + ports[i];
+            uri += "/index/api/addStreamProxy?vhost=__defaultVhost__&app=normal";
             uri += "&stream=creamerName"+dc.getCreamerName()+"-desktop"+dc.getDeskNo();
-            uri += "&url=rtsp://admin:Hz45933869@"+dc.getIp();
-            uri += "&pull_time=300&enable_rtsp=1&enable_rtmp=1&rtp_type=0&secret=035c73f7-bb6b-4889-a715-d9eb2d1925cc";
+            uri += "&url=rtsp://admin:a1234567@"+dc.getIp();
+            uri += "&push_url=''&pull_time=300&enable_rtsp=1&enable_rtmp=1&rtp_type=0&secret=035c73f7-bb6b-4889-a715-d9eb2d1925cc";
             URL url = new URL(uri);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
@@ -37,6 +43,8 @@ public class HttpApi {
             connection.disconnect();
 
             System.out.println(result.toString());
+            logger.warn("违规ip:{}",dc.getIp());
+            logger.error("违规ip:{}",dc.getIp());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -44,8 +52,9 @@ public class HttpApi {
 
     public static void main(String[] args) {
         DeskCreamer deskCreamer = new DeskCreamer("1","55","192.168.1.65",895,280);
+        System.out.println(Integer.parseInt("69")%3);
         try {
-            sendGet(deskCreamer);
+           // sendGet(deskCreamer);
         } catch (Exception e) {
             e.printStackTrace();
         }
