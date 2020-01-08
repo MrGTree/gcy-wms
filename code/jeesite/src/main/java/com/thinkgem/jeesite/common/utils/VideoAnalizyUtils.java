@@ -22,7 +22,6 @@ import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
-import com.thinkgem.jeesite.video.javacv.PictureSaveAndSend;
 import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
 import com.thinkgem.jeesite.websocket.WsPictureHandler;
 import org.apache.commons.collections.CollectionUtils;
@@ -54,17 +53,18 @@ public class VideoAnalizyUtils {
     private static final Scalar red = new Scalar(0, 0, 255);//红色
     private static final Scalar blue = new Scalar(255, 0, 0);//蓝色
 
-    public static volatile boolean pictureThreadOpen = false;
+    private static Float useScore = Global.getUseScore();
 
     public static void sendPicture(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
         Mat image1 = null;
         Mat colorMat = null;
         String picName = "";
+        List<Map<String, Object>> manPoints = new ArrayList<>();
         try {
             //保存图片
             image1 = new Mat(height, width, CvType.CV_8UC3);
             image1.put(0, 0, bytes);
-            colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
+            colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult,manPoints);
             String dateStr = DateUtils.getDate("yyyy-MM-dd-HH:mm:ss");
             picName = camerName + "_" + dateStr + "_" + IdGen.uuid() + ".jpg";
             String fileName = Global.getNormalImagePath() + picName;
@@ -87,6 +87,9 @@ public class VideoAnalizyUtils {
             //推送通知
             Map<String, Object> messageSend = new HashMap<>();
             messageSend.put("imageUrl", Global.getNormalUrlImagePath() + picName);
+            messageSend.put("width",width);
+            messageSend.put("height",height);
+            messageSend.put("manPoints",manPoints);
             SpringContextHolder.getBean(WsPictureHandler.class).sendMessageToCameraUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)), camerName);
         } catch (Exception e) {
             logger.error("{} send message fail:", camerName, e);
@@ -290,7 +293,7 @@ public class VideoAnalizyUtils {
         }
     }
 
-    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result) {
+    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result,List<Map<String,Object>> onePoints) {
         Mat dmap = null;
         Mat color_dmap = null;
         Mat base_img = null;
@@ -315,11 +318,18 @@ public class VideoAnalizyUtils {
             // draw keypoint
             StPointF[] pts = crowd_result.getKeypoints();
             for (int i = 0; i < crowd_result.getKeypointCount(); ++i) {
+                float[] pointsScore = crowd_result.getPointsScore();
+                if (pointsScore[i] >= useScore){
+                    HashMap<String, Object> onePoint = new HashMap<>();
+                    onePoint.put("x",pts[i].x);
+                    onePoint.put("y",pts[i].y);
+                    onePoints.add(onePoint);
+                }
                 Imgproc.circle(
                         vis_dmap,
                         new Point(pts[i].x, pts[i].y),
                         3, white, -1);
-                Imgproc.putText(vis_dmap, String.format("%.2f", crowd_result.getPointsScore()[i]),
+                Imgproc.putText(vis_dmap, String.format("%.2f", pointsScore[i]),
                         new Point(pts[i].x, pts[i].y - 5),
                         FONT_HERSHEY_SIMPLEX, 1, blue,
                         2, 8, false);
@@ -339,16 +349,6 @@ public class VideoAnalizyUtils {
                 base_img.release();
                 base_img = null;
             }
-        }
-    }
-
-
-    public static void getPictureAndSend(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
-        videoToPictureSet.add(new VideoToPicture(width, height, camerName, bytes, crowdResult));
-        if (!pictureThreadOpen) {
-            logger.error("pictureThreadOpen -------------,camerName:{}", camerName);
-            pictureThreadOpen = true;
-            threadPoolTaskExecutor.execute(new PictureSaveAndSend());
         }
     }
 }

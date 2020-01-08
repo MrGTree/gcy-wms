@@ -310,10 +310,10 @@ public class ConvertVideoPakcetPicture {
         logger.error("analizy go go go go ");
         //分析时违规记录
         long no_frame_index = 0;
-        long pktCount = 0;
         //for循环获取视频帧
         while ( cameraOpen && av_read_frame(pFormatCtx, pkt) == 0) {
             // Is this a packet from the video stream?
+            long start = System.currentTimeMillis();
             if (pkt.stream_index() == videoStreamIndex) {
                 if (pkt == null || pkt.size() <= 0 || pkt.data() == null) {
                     //空包记录次数跳过
@@ -326,7 +326,7 @@ public class ConvertVideoPakcetPicture {
                         continue;
                     }
                 }
-                logger.error("packet one second picture........");
+                logger.info("packet one second picture........");
                 if (avcodec_send_packet(pCodecCtx, pkt) == 0) {
                     //Send video packet to be decoding
                     //Receive decoded video frame
@@ -348,16 +348,14 @@ public class ConvertVideoPakcetPicture {
                         byte[] bytes = saveFrame(outFrameRGB, width, height);
                         av_free(buffer);//free buffer
                         //获取分析这一视频帧图片
-                        StCrowdDensityResult crowdResult = null;
+                        logger.error("ready sendPicture.....");
                         if (bytes != null && bytes.length > 0) {
-                            crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-                            logger.error("ready sendPicture.....");
+                            StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
                             VideoAnalizyUtils.sendPicture(width, height, urlMapper.getCamerName(), bytes, crowdResult);
-                            pktCount = framerate;
-                            if (pktCount > 0) {
+                            while ((System.currentTimeMillis() - start) < 999){
                                 av_packet_unref(pkt);
+                                pFormatCtx.flush_packets();
                                 av_read_frame(pFormatCtx, pkt);
-                                pktCount--;
                             }
                         }
                         //大与两个人
