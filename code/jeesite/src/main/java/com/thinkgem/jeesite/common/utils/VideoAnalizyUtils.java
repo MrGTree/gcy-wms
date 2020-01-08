@@ -87,6 +87,8 @@ public class VideoAnalizyUtils {
             //推送通知
             Map<String, Object> messageSend = new HashMap<>();
             messageSend.put("imageUrl", Global.getNormalUrlImagePath() + picName);
+            messageSend.put("width",width);
+            messageSend.put("height",height);
             messageSend.put("manPoints",manPoints);
             SpringContextHolder.getBean(WsPictureHandler.class).sendMessageToCameraUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)), camerName);
         } catch (Exception e) {
