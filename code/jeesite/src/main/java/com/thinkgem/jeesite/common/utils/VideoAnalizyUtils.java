@@ -1,5 +1,22 @@
 package com.thinkgem.jeesite.common.utils;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.Raster;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.opencv.core.Core.addWeighted;
+import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.core.CvType.CV_8UC3;
+import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
+import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
@@ -24,24 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.TextMessage;
-
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferByte;
-import java.awt.image.Raster;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.opencv.core.Core.addWeighted;
-import static org.opencv.core.CvType.CV_32F;
-import static org.opencv.core.CvType.CV_8UC3;
-import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
-import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
 
 /**
  * @author liuji
@@ -113,8 +112,9 @@ public class VideoAnalizyUtils {
             for (int j = 0; j < keypoints.length; j++) {
                 float[] pointsScore = crowdResult.getPointsScore();
                 float score = pointsScore[j];
-                if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
-                        urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
+                //&& urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() && urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()
+                //裁剪补偿
+                if (score >= useScore ) {
                     manList.add(new Man(keypoints[j].x + urlMapper.getMinX(), keypoints[j].y + urlMapper.getMinY()));
                 }
             }
@@ -280,8 +280,8 @@ public class VideoAnalizyUtils {
                         FONT_HERSHEY_SIMPLEX, 1, blue,
                         2, 8, false);
             }
-            Imgproc.circle(vis_dmap, new Point(manIn.getX() - urlMapper.getMinX(), manIn.getY() - urlMapper.getMinX()), 3, red, -1);
-            Imgproc.circle(vis_dmap, new Point(manOut.getX() - urlMapper.getMinX(), manOut.getY() - urlMapper.getMinX()), 3, red, -1);
+            Imgproc.circle(vis_dmap, new Point(manIn.getX() - urlMapper.getMinX(), manIn.getY() - urlMapper.getMinY()), 3, red, -1);
+            Imgproc.circle(vis_dmap, new Point(manOut.getX() - urlMapper.getMinX(), manOut.getY() - urlMapper.getMinY()), 3, red, -1);
             logger.info("visualize_dmap ... end ....");
             return vis_dmap;
         } finally {
