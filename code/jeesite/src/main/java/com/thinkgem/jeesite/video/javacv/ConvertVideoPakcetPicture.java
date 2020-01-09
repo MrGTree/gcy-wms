@@ -1,33 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import com.sensetime.ad.core.StCrowdDensityDetector;
-import com.sensetime.ad.core.StFaceException;
-import com.sensetime.ad.sdk.StCrowdDensityResult;
-import com.sensetime.ad.sdk.StImageFormat;
-import com.thinkgem.jeesite.common.config.Global;
-import com.thinkgem.jeesite.common.utils.SpringContextHolder;
-import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
-import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
-import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
-import net.coobird.thumbnailator.Thumbnails;
-import org.bytedeco.ffmpeg.avcodec.AVCodec;
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
-import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
-import org.bytedeco.ffmpeg.avcodec.AVPacket;
-import org.bytedeco.ffmpeg.avformat.AVFormatContext;
-import org.bytedeco.ffmpeg.avformat.AVInputFormat;
-import org.bytedeco.ffmpeg.avformat.AVStream;
-import org.bytedeco.ffmpeg.avutil.AVDictionary;
-import org.bytedeco.ffmpeg.avutil.AVFrame;
-import org.bytedeco.ffmpeg.avutil.AVRational;
-import org.bytedeco.ffmpeg.swscale.SwsContext;
-import org.bytedeco.javacpp.BytePointer;
-import org.bytedeco.javacpp.DoublePointer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.IOException;
@@ -62,6 +35,32 @@ import static org.bytedeco.ffmpeg.global.swscale.SWS_FAST_BILINEAR;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_getContext;
 import static org.bytedeco.ffmpeg.global.swscale.sws_scale;
+import com.sensetime.ad.core.StCrowdDensityDetector;
+import com.sensetime.ad.core.StFaceException;
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StImageFormat;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.utils.SpringContextHolder;
+import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
+import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
+import net.coobird.thumbnailator.Thumbnails;
+import org.bytedeco.ffmpeg.avcodec.AVCodec;
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
+import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
+import org.bytedeco.ffmpeg.avcodec.AVPacket;
+import org.bytedeco.ffmpeg.avformat.AVFormatContext;
+import org.bytedeco.ffmpeg.avformat.AVInputFormat;
+import org.bytedeco.ffmpeg.avformat.AVStream;
+import org.bytedeco.ffmpeg.avutil.AVDictionary;
+import org.bytedeco.ffmpeg.avutil.AVFrame;
+import org.bytedeco.ffmpeg.avutil.AVRational;
+import org.bytedeco.ffmpeg.swscale.SwsContext;
+import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.DoublePointer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -355,7 +354,7 @@ public class ConvertVideoPakcetPicture {
                         logger.error("ready sendPicture.....");
                         if (bytes != null && bytes.length > 0) {
                             BufferedImage bufferedImage = VideoAnalizyUtils.BGR2BufferedImage(bytes, width, height);
-                            BufferedImage image = Thumbnails.of(bufferedImage).sourceRegion((int) urlMapper.getMinX(), (int) urlMapper.getMinY(), (int) urlMapper.getMaxX(), (int) urlMapper.getMaxY()).size(width, height).keepAspectRatio(true).asBufferedImage();
+                            BufferedImage image = Thumbnails.of(bufferedImage).sourceRegion((int) urlMapper.getMinX(), (int) urlMapper.getMinY(), (int) urlMapper.getMaxX() - (int) urlMapper.getMinX(), (int) urlMapper.getMaxY() - (int) urlMapper.getMinY()).size(width, height).keepAspectRatio(true).asBufferedImage();
                             byte[] data = ((DataBufferByte) image.getData().getDataBuffer()).getData();
                             StCrowdDensityResult crowdResult = detector.track(data, StImageFormat.ST_PIX_FMT_BGR888, image.getWidth(), image.getHeight());
                             VideoAnalizyUtils.sendPicture(image.getWidth(), image.getHeight(), urlMapper.getCamerName(), data, crowdResult,urlMapper, width, height);
