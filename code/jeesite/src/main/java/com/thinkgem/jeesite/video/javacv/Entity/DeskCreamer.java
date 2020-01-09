@@ -7,11 +7,20 @@ import lombok.Data;
  */
 public class DeskCreamer {
 
-    private String creamerName;   //天花板摄像头号
+    private String classRoom;     //教室号
+    private String creamerName;   //桌面摄像头号
     private String deskNo;    //考桌编号
     private String ip;        //桌面摄像头ip
     private float dcX;      //桌面摄像头x坐标
     private float dcY;      //桌面摄像头y坐标
+
+    public String getClassRoom() {
+        return classRoom;
+    }
+
+    public void setClassRoom(String classRoom) {
+        this.classRoom = classRoom;
+    }
 
     public String getCreamerName() {
         return creamerName;

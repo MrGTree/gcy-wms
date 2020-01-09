@@ -27,7 +27,8 @@ public class DeskCreamerMaps {
         Map<String, List<DeskCreamer>> result = new HashMap<>();
         String filename = "/home/ron/deskCreamer.xlsx";
         List<DeskCreamer> deskCreamerList = parseFromExcel(filename, 1, DeskCreamer.class);
-        deskCreamerList.forEach(e->{logger.warn(e.toString());logger.error(e.toString());});
+        logger.warn("读取桌面摄像头信息条数：{}", deskCreamerList.size());
+       // deskCreamerList.forEach(e->logger.warn(e.toString()));
         if(!CollectionUtils.isEmpty(deskCreamerList)){
             result = deskCreamerList.stream().collect(Collectors.groupingBy(DeskCreamer::getCreamerName));
         }

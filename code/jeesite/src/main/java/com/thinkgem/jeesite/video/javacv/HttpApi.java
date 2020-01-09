@@ -24,7 +24,7 @@ public class HttpApi {
             int i = Integer.parseInt(dc.getDeskNo()) % 3;
             uri += ":" + ports[i];
             uri += "/index/api/addStreamProxy?vhost=__defaultVhost__&app=normal";
-            uri += "&stream=creamerName"+dc.getCreamerName()+"-desktop"+dc.getDeskNo();
+            uri += "&stream=classroom"+dc.getClassRoom()+"-camera"+dc.getCreamerName();
             uri += "&url=rtsp://admin:a1234567@"+dc.getIp();
             uri += "&push_url=''&pull_time=300&enable_rtsp=1&enable_rtmp=1&rtp_type=0&secret=035c73f7-bb6b-4889-a715-d9eb2d1925cc";
             URL url = new URL(uri);

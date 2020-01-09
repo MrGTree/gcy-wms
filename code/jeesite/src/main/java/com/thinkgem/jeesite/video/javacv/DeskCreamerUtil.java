@@ -2,16 +2,12 @@ package com.thinkgem.jeesite.video.javacv;
 
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.video.javacv.Entity.DeskCreamer;
-import org.apache.ibatis.thread.PropertiesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.util.CollectionUtils;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-
 
 /**
  *
@@ -20,10 +16,22 @@ import java.util.Properties;
  */
 public class DeskCreamerUtil {
 
-    private static Map<String,List<DeskCreamer>> map = SpringContextHolder.getBean("deskCreamerMapList");
+    private static Logger logger = LoggerFactory.getLogger(DeskCreamerUtil.class);
 
     public static DeskCreamer calcAndGetDeskCreamer(String creamerName, float x , float y){
+        Map<String,List<DeskCreamer>> map = SpringContextHolder.getBean("deskCreamerMapList");
+        if(CollectionUtils.isEmpty(map)){
+            try {
+                throw new Exception("未取得桌面摄像头桌位ip信息");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if(creamerName.length()==1){
+            creamerName = "0"+creamerName;
+        }
         List<DeskCreamer> deskCreamers = map.get(creamerName);
+        logger.warn("桌面摄像头桌位ip信息 map size is {}", deskCreamers.size());
         DeskCreamer minDistDC = getMinDistDC(deskCreamers, x, y);
         return minDistDC;
     }
