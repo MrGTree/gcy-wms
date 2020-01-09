@@ -1,11 +1,6 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
@@ -23,6 +18,11 @@ import org.bytedeco.javacv.FrameGrabber;
 import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *  * rtsp转rtmp（转封装方式）
@@ -175,7 +175,7 @@ public class ConvertVideoPakcetOfficial {
                 logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
                 //大与两个人
                 if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
-                    if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
+                    if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult,width,height)) {
                         pktCount = (videoLength * framerate);
                     } else {
                         pktCount = framerate;

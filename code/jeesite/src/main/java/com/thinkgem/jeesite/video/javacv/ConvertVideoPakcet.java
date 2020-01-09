@@ -14,6 +14,7 @@ import com.thinkgem.jeesite.video.javacv.Entity.Man;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
 import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
+import net.coobird.thumbnailator.Thumbnails;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
 import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
@@ -30,6 +31,9 @@ import org.bytedeco.javacpp.DoublePointer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -315,13 +319,13 @@ public class ConvertVideoPakcet {
      */
 
 
-    public ConvertVideoPakcet go() throws StFaceException {
+    public ConvertVideoPakcet go() throws StFaceException, IOException {
         logger.debug("analizy go go go go ");
         //分析时违规记录
         HashMap<Man, CloseRelation> closeRelationMap = new HashMap<>();
 
         long no_frame_index = 0;
-        long waitTime = 0 ;
+        long waitTime = 0;
         //for循环获取视频帧
         while (av_read_frame(pFormatCtx, pkt) == 0) {
             // Is this a packet from the video stream?
@@ -361,17 +365,20 @@ public class ConvertVideoPakcet {
                         //获取分析这一视频帧图片
                         if (bytes != null && bytes.length > 0) {
                             //保证读取到一帧图片
-                            StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
+                            BufferedImage bufferedImage = VideoAnalizyUtils.BGR2BufferedImage(bytes, width, height);
+                            BufferedImage image = Thumbnails.of(bufferedImage).sourceRegion((int) urlMapper.getMinX(), (int) urlMapper.getMinY(), (int) urlMapper.getMaxX(), (int) urlMapper.getMaxY()).size(width, height).keepAspectRatio(true).asBufferedImage();
+                            byte[] data = ((DataBufferByte) image.getData().getDataBuffer()).getData();
+                            StCrowdDensityResult crowdResult = detector.track(data, StImageFormat.ST_PIX_FMT_BGR888, image.getWidth(), image.getHeight());
                             //大与两个人
                             if (crowdResult != null && 1 < crowdResult.getNumberOfPeople()) {
                                 logger.info("track success.crowdResult.Width:{},Height:{},Number of People:{},Number of keypoints:{},keypoints:{}", crowdResult.getWidth(), crowdResult.getHeight(), crowdResult.getNumberOfPeople(), crowdResult.getKeypointCount(), JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
-                                if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, width, height, bytes, crowdResult)) {
+                                if (VideoAnalizyUtils.judgeVideo(VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore), closeRelationMap, tooCloseValue, urlMapper, image.getWidth(), image.getHeight(), data, crowdResult,width,height)) {
                                     waitTime = (videoLength * 1000) - 1;
                                 } else {
                                     waitTime = 999;
                                 }
                             }
-                            while ((System.currentTimeMillis() - start) < waitTime){
+                            while ((System.currentTimeMillis() - start) < waitTime) {
                                 av_packet_unref(pkt);
                                 pFormatCtx.flush_packets();
                                 av_read_frame(pFormatCtx, pkt);

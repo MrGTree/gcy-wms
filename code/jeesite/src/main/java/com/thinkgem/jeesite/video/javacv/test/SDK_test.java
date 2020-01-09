@@ -8,6 +8,7 @@ import com.sensetime.ad.sdk.StLibrary;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -82,7 +83,7 @@ public class SDK_test {
                 System.out.println(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
             }
 
-            Mat colorMat = VideoAnalizyUtils.visualize_dmap(mat, crowdResult,man,man1);
+            Mat colorMat = VideoAnalizyUtils.visualize_dmap(mat, crowdResult,man,man1,new UrlMapper());
             Imgcodecs.imwrite(RESULT_PATH, colorMat);
         } catch (StFaceException e) {
             e.printStackTrace();
