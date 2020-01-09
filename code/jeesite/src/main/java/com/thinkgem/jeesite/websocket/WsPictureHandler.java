@@ -1,13 +1,5 @@
 package com.thinkgem.jeesite.websocket;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import com.thinkgem.jeesite.common.utils.SpringContextHolder;
 import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.ConvertVideoPakcet;
@@ -24,6 +16,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 public class WsPictureHandler extends TextWebSocketHandler {
@@ -127,7 +127,6 @@ public class WsPictureHandler extends TextWebSocketHandler {
                     user.sendMessage(message);
                 } else {
                     users.remove(user);
-                    sessionCamera.remove(user);
                     pictureThreadOpen(user);
                 }
             } catch (IOException e) {
