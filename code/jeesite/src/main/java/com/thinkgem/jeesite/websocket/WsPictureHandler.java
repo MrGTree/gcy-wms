@@ -126,7 +126,6 @@ public class WsPictureHandler extends TextWebSocketHandler {
                 if (user.isOpen()) {
                     user.sendMessage(message);
                 } else {
-                    users.remove(user);
                     pictureThreadOpen(user);
                 }
             } catch (IOException e) {
