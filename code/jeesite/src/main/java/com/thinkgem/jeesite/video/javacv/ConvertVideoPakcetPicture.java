@@ -11,6 +11,7 @@ import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
 import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
+import net.coobird.thumbnailator.Thumbnails;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
 import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
@@ -27,6 +28,9 @@ import org.bytedeco.javacpp.DoublePointer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -306,7 +310,7 @@ public class ConvertVideoPakcetPicture {
      */
 
 
-    public ConvertVideoPakcetPicture go() throws StFaceException {
+    public ConvertVideoPakcetPicture go() throws StFaceException, IOException {
         logger.error("analizy go go go go ");
         //分析时违规记录
         long no_frame_index = 0;
@@ -350,8 +354,11 @@ public class ConvertVideoPakcetPicture {
                         //获取分析这一视频帧图片
                         logger.error("ready sendPicture.....");
                         if (bytes != null && bytes.length > 0) {
-                            StCrowdDensityResult crowdResult = detector.track(bytes, StImageFormat.ST_PIX_FMT_BGR888, width, height);
-                            VideoAnalizyUtils.sendPicture(width, height, urlMapper.getCamerName(), bytes, crowdResult);
+                            BufferedImage bufferedImage = VideoAnalizyUtils.BGR2BufferedImage(bytes, width, height);
+                            BufferedImage image = Thumbnails.of(bufferedImage).sourceRegion((int) urlMapper.getMinX(), (int) urlMapper.getMinY(), (int) urlMapper.getMaxX(), (int) urlMapper.getMaxY()).size(width, height).keepAspectRatio(true).asBufferedImage();
+                            byte[] data = ((DataBufferByte) image.getData().getDataBuffer()).getData();
+                            StCrowdDensityResult crowdResult = detector.track(data, StImageFormat.ST_PIX_FMT_BGR888, image.getWidth(), image.getHeight());
+                            VideoAnalizyUtils.sendPicture(image.getWidth(), image.getHeight(), urlMapper.getCamerName(), data, crowdResult,urlMapper, width, height);
                             while ((System.currentTimeMillis() - start) < 999){
                                 av_packet_unref(pkt);
                                 pFormatCtx.flush_packets();

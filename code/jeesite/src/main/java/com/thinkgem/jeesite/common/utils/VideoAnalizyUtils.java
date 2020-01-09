@@ -1,5 +1,10 @@
 package com.thinkgem.jeesite.common.utils;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.Raster;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,16 +60,17 @@ public class VideoAnalizyUtils {
 
     private static Float useScore = Global.getUseScore();
 
-    public static void sendPicture(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult) {
+    public static void sendPicture(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult, UrlMapper urlMapper, int orgWidth, int orgHeight) {
         Mat image1 = null;
         Mat colorMat = null;
         String picName = "";
-        List<Map<String, Object>> manPoints = new ArrayList<>();
+        List<Man> men = null;
         try {
             //保存图片
             image1 = new Mat(height, width, CvType.CV_8UC3);
             image1.put(0, 0, bytes);
-            colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult,manPoints);
+            men = VideoAnalizyUtils.crowdResultToManList(crowdResult, urlMapper, useScore);
+            colorMat = VideoAnalizyUtils.visualize_dmap(image1, crowdResult);
             String dateStr = DateUtils.getDate("yyyy-MM-dd-HH:mm:ss");
             picName = camerName + "_" + dateStr + "_" + IdGen.uuid() + ".jpg";
             String fileName = Global.getNormalImagePath() + picName;
@@ -87,9 +93,9 @@ public class VideoAnalizyUtils {
             //推送通知
             Map<String, Object> messageSend = new HashMap<>();
             messageSend.put("imageUrl", Global.getNormalUrlImagePath() + picName);
-            messageSend.put("width",width);
-            messageSend.put("height",height);
-            messageSend.put("manPoints",manPoints);
+            messageSend.put("width", orgWidth);
+            messageSend.put("height", orgHeight);
+            messageSend.put("manPoints", men);
             SpringContextHolder.getBean(WsPictureHandler.class).sendMessageToCameraUsers(new TextMessage(JsonMapper.getInstance().toJson(messageSend)), camerName);
         } catch (Exception e) {
             logger.error("{} send message fail:", camerName, e);
@@ -106,16 +112,17 @@ public class VideoAnalizyUtils {
             for (int j = 0; j < keypoints.length; j++) {
                 float[] pointsScore = crowdResult.getPointsScore();
                 float score = pointsScore[j];
-                if (score >= useScore && urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() &&
-                        urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()) {
-                    manList.add(new Man(keypoints[j].x, keypoints[j].y));
+                //&& urlMapper.getMinX() <= keypoints[j].x && keypoints[j].x <= urlMapper.getMaxX() && urlMapper.getMinY() <= keypoints[j].y && keypoints[j].y <= urlMapper.getMaxY()
+                //裁剪补偿
+                if (score >= useScore ) {
+                    manList.add(new Man(keypoints[j].x + urlMapper.getMinX(), keypoints[j].y + urlMapper.getMinY()));
                 }
             }
         }
         return manList;
     }
 
-    public static boolean judgeVideo(List<Man> manList, Map<Man, CloseRelation> closeRelationMap, Float tooCloseValue, UrlMapper urlMapper, int width, int height, byte[] bytes, StCrowdDensityResult crowdResult) {
+    public static boolean judgeVideo(List<Man> manList, Map<Man, CloseRelation> closeRelationMap, Float tooCloseValue, UrlMapper urlMapper, int width, int height, byte[] bytes, StCrowdDensityResult crowdResult, int orgWidth, int orgHeight) {
         if (manList == null || manList.isEmpty()) {
             return false;
         }
@@ -151,7 +158,7 @@ public class VideoAnalizyUtils {
                                 int time = closeManOn.getTime();
                                 if (time >= 6) {
                                     logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
-                                    threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult));
+                                    threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult, orgWidth, orgHeight, urlMapper));
                                     threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
                                     //清空map
                                     closeRelationMap.clear();
@@ -239,7 +246,7 @@ public class VideoAnalizyUtils {
         return null;
     }
 
-    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result, Man manIn, Man manOut) {
+    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result, Man manIn, Man manOut, UrlMapper urlMapper) {
         Mat dmap = null;
         Mat color_dmap = null;
         Mat base_img = null;
@@ -273,8 +280,8 @@ public class VideoAnalizyUtils {
                         FONT_HERSHEY_SIMPLEX, 1, blue,
                         2, 8, false);
             }
-            Imgproc.circle(vis_dmap, new Point(manIn.getX(), manIn.getY()), 3, red, -1);
-            Imgproc.circle(vis_dmap, new Point(manOut.getX(), manOut.getY()), 3, red, -1);
+            Imgproc.circle(vis_dmap, new Point(manIn.getX() - urlMapper.getMinX(), manIn.getY() - urlMapper.getMinY()), 3, red, -1);
+            Imgproc.circle(vis_dmap, new Point(manOut.getX() - urlMapper.getMinX(), manOut.getY() - urlMapper.getMinY()), 3, red, -1);
             logger.info("visualize_dmap ... end ....");
             return vis_dmap;
         } finally {
@@ -293,7 +300,7 @@ public class VideoAnalizyUtils {
         }
     }
 
-    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result,List<Map<String,Object>> onePoints) {
+    public static Mat visualize_dmap(Mat ori_img, StCrowdDensityResult crowd_result) {
         Mat dmap = null;
         Mat color_dmap = null;
         Mat base_img = null;
@@ -318,18 +325,11 @@ public class VideoAnalizyUtils {
             // draw keypoint
             StPointF[] pts = crowd_result.getKeypoints();
             for (int i = 0; i < crowd_result.getKeypointCount(); ++i) {
-                float[] pointsScore = crowd_result.getPointsScore();
-                if (pointsScore[i] >= useScore){
-                    HashMap<String, Object> onePoint = new HashMap<>();
-                    onePoint.put("x",pts[i].x);
-                    onePoint.put("y",pts[i].y);
-                    onePoints.add(onePoint);
-                }
                 Imgproc.circle(
                         vis_dmap,
                         new Point(pts[i].x, pts[i].y),
                         3, white, -1);
-                Imgproc.putText(vis_dmap, String.format("%.2f", pointsScore[i]),
+                Imgproc.putText(vis_dmap, String.format("%.2f", crowd_result.getPointsScore()[i]),
                         new Point(pts[i].x, pts[i].y - 5),
                         FONT_HERSHEY_SIMPLEX, 1, blue,
                         2, 8, false);
@@ -350,5 +350,22 @@ public class VideoAnalizyUtils {
                 base_img = null;
             }
         }
+    }
+
+    /**
+     * 24位BGR数组转BufferedImage
+     *
+     * @param src       -源数据数组
+     * @param width     -宽度
+     * @param height-高度
+     * @return
+     */
+    public static BufferedImage BGR2BufferedImage(byte[] src, int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+        Raster ra = image.getRaster();
+        DataBuffer out = ra.getDataBuffer();
+        DataBufferByte db = (DataBufferByte) out;
+        ByteBuffer.wrap(db.getData()).put(src, 0, src.length);
+        return image;
     }
 }

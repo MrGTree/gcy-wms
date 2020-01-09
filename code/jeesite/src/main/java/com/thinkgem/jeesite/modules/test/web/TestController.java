@@ -3,16 +3,6 @@
  */
 package com.thinkgem.jeesite.modules.test.web;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
@@ -44,6 +34,17 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.socket.TextMessage;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import static com.thinkgem.jeesite.common.utils.VideoAnalizyUtils.getCloseMan;
 
 /**
  * 测试Controller
@@ -121,7 +122,7 @@ public class TestController extends BaseController {
     @RequestMapping(value = "websocket")
     @ResponseBody
     public String websocket() throws JsonProcessingException {
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1280, 720, new Man(100, 100), new Man(200, 200), "1", null, null));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(1280, 720, new Man(100, 100), new Man(200, 200), "1", null, null,1280,720,new UrlMapper()));
         return "ok";
     }
 
@@ -226,7 +227,7 @@ public class TestController extends BaseController {
             logger.debug(String.format("(x, y) = (%.2f - %.2f)", pt.x, pt.y));
         }
 
-        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width1[0], height1[0], man, man1, "1", imageData, crowdResult));
+        ((ThreadPoolTaskExecutor) SpringContextHolder.getBean("threadPoolTaskExecutor")).execute(new BreakRulePushMessage(width1[0], height1[0], man, man1, "1", imageData, crowdResult,width1[0],height1[0],new UrlMapper()));
 
         if (detector != null) {
             detector.release();
