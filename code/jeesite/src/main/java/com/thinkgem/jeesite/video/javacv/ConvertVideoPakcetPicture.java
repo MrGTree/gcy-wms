@@ -11,7 +11,6 @@ import com.thinkgem.jeesite.common.utils.VideoAnalizyUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import com.thinkgem.jeesite.video.javacv.exception.FileNotOpenException;
 import com.thinkgem.jeesite.video.javacv.exception.StreamInfoNotFoundException;
-import net.coobird.thumbnailator.Thumbnails;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
 import org.bytedeco.ffmpeg.avcodec.AVCodecParameters;
@@ -354,8 +353,7 @@ public class ConvertVideoPakcetPicture {
                         //获取分析这一视频帧图片
                         logger.error("ready sendPicture.....");
                         if (bytes != null && bytes.length > 0) {
-                            BufferedImage bufferedImage = VideoAnalizyUtils.BGR2BufferedImage(bytes, width, height);
-                            BufferedImage image = Thumbnails.of(bufferedImage).sourceRegion((int) urlMapper.getMinX(), (int) urlMapper.getMinY(), (int) urlMapper.getMaxX(), (int) urlMapper.getMaxY()).size(width, height).keepAspectRatio(true).asBufferedImage();
+                            BufferedImage image = VideoAnalizyUtils.imageFilterToCutImageBytes(bytes, width, height, urlMapper);
                             byte[] data = ((DataBufferByte) image.getData().getDataBuffer()).getData();
                             StCrowdDensityResult crowdResult = detector.track(data, StImageFormat.ST_PIX_FMT_BGR888, image.getWidth(), image.getHeight());
                             VideoAnalizyUtils.sendPicture(image.getWidth(), image.getHeight(), urlMapper.getCamerName(), data, crowdResult,urlMapper, width, height);

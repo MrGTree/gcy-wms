@@ -1,5 +1,8 @@
 package com.thinkgem.jeesite.video.javacv;
 
+import java.util.Date;
+
+import static com.thinkgem.jeesite.common.config.Global.MESSAGE_TYPE_1;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.mapper.JsonMapper;
@@ -18,10 +21,6 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
-
-import java.util.Date;
-
-import static com.thinkgem.jeesite.common.config.Global.MESSAGE_TYPE_1;
 
 /**
  * 另起线程通知和保存图片信息
@@ -49,8 +48,8 @@ public class BreakRulePushMessage implements Runnable {
         this.camerName = camerName;
         this.bytes = bytes;
         this.crowdResult = crowdResult;
-        this.width = orgWidth;
-        this.height = orgHeight;
+        this.orgWidth = orgWidth;
+        this.orgHeight = orgHeight;
         this.urlMapper = urlMapper;
     }
 

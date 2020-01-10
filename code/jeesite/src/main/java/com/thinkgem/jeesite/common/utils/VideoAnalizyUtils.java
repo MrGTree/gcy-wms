@@ -1,9 +1,36 @@
 package com.thinkgem.jeesite.common.utils;
 
+import com.sensetime.ad.sdk.StCrowdDensityResult;
+import com.sensetime.ad.sdk.StPointF;
+import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.mapper.JsonMapper;
+import com.thinkgem.jeesite.video.javacv.BreakRulePushMessage;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
+import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
+import com.thinkgem.jeesite.video.javacv.Entity.Man;
+import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
+import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
+import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
+import com.thinkgem.jeesite.websocket.WsPictureHandler;
+import net.coobird.thumbnailator.Thumbnails;
+import org.apache.commons.collections.CollectionUtils;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.web.socket.TextMessage;
+
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,30 +44,6 @@ import static org.opencv.core.CvType.CV_32F;
 import static org.opencv.core.CvType.CV_8UC3;
 import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
 import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
-import com.sensetime.ad.sdk.StCrowdDensityResult;
-import com.sensetime.ad.sdk.StPointF;
-import com.thinkgem.jeesite.common.config.Global;
-import com.thinkgem.jeesite.common.mapper.JsonMapper;
-import com.thinkgem.jeesite.video.javacv.BreakRulePushMessage;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseMan;
-import com.thinkgem.jeesite.video.javacv.Entity.CloseRelation;
-import com.thinkgem.jeesite.video.javacv.Entity.Man;
-import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
-import com.thinkgem.jeesite.video.javacv.Entity.VideoToPicture;
-import com.thinkgem.jeesite.video.javacv.PushVideoHandler;
-import com.thinkgem.jeesite.websocket.WsPictureHandler;
-import org.apache.commons.collections.CollectionUtils;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.web.socket.TextMessage;
 
 /**
  * @author liuji
@@ -108,7 +111,7 @@ public class VideoAnalizyUtils {
         StPointF[] keypoints = crowdResult.getKeypoints();
         //初始化有效的manList
         ArrayList<Man> manList = new ArrayList<>();
-        if (keypoints != null && keypoints.length > 1) {
+        if (keypoints != null) {
             for (int j = 0; j < keypoints.length; j++) {
                 float[] pointsScore = crowdResult.getPointsScore();
                 float score = pointsScore[j];
@@ -156,7 +159,7 @@ public class VideoAnalizyUtils {
                                 continue;
                             } else {
                                 int time = closeManOn.getTime();
-                                if (time >= 6) {
+                                if (time >= 4) {
                                     logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
                                     threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult, orgWidth, orgHeight, urlMapper));
                                     threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
@@ -368,4 +371,22 @@ public class VideoAnalizyUtils {
         ByteBuffer.wrap(db.getData()).put(src, 0, src.length);
         return image;
     }
+
+    /**
+     * 裁剪图片共方法
+     * @param sourceBytes
+     * @param sourceWidth
+     * @param sourceHeight
+     * @param urlMapper
+     * @return
+     * @throws IOException
+     */
+    public static BufferedImage imageFilterToCutImageBytes(byte[] sourceBytes,int sourceWidth,int sourceHeight,UrlMapper urlMapper) throws IOException {
+        BufferedImage bufferedImage = VideoAnalizyUtils.BGR2BufferedImage(sourceBytes, sourceWidth, sourceHeight);
+        return Thumbnails.of(bufferedImage).sourceRegion((int) urlMapper.getMinX(), (int) urlMapper.getMinY(), (int) urlMapper.getMaxX() - (int) urlMapper.getMinX(), (int) urlMapper.getMaxY() - (int) urlMapper.getMinY()).size((int) urlMapper.getMaxX() - (int) urlMapper.getMinX(), (int) urlMapper.getMaxY()- (int) urlMapper.getMinY()).outputQuality(1).keepAspectRatio(true).asBufferedImage();
+    }
+
+//    public static void main(String[] args) throws IOException {
+//        Thumbnails.of("D:\\1.jpg").sourceRegion(200,100,800,600).size(800,600).keepAspectRatio(true).outputQuality(1).toFile("D:\\1_1.jpg");
+//    }
 }
