@@ -27,9 +27,6 @@ public class DeskCreamerUtil {
                 e.printStackTrace();
             }
         }
-        if(creamerName.length()==1){
-            creamerName = "0"+creamerName;
-        }
         List<DeskCreamer> deskCreamers = map.get(creamerName);
         logger.warn("桌面摄像头桌位ip信息 map size is {}", deskCreamers.size());
         DeskCreamer minDistDC = getMinDistDC(deskCreamers, x, y);

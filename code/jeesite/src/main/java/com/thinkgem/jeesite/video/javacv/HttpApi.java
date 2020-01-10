@@ -1,6 +1,7 @@
 package com.thinkgem.jeesite.video.javacv;
 
 
+import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.video.javacv.Entity.DeskCreamer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,16 +16,27 @@ public class HttpApi {
 
     private static Logger logger = LoggerFactory.getLogger(HttpApi.class);
 
-    private static final String[] ports = {"9088","9089","9090"};
+    private static String[] ports = null;
 
     private static String uri = "http://192.168.1.250";
 
+    static {
+        if(ports==null || ports.length==0){
+            String s = Global.getConfig("video.monitor.deskCamera.port");
+            ports = s.split(",");
+        }
+    }
+
     public static void sendGet(DeskCreamer dc) throws Exception {
         try {
-            int i = Integer.parseInt(dc.getDeskNo()) % 3;
+            int portSize = ports.length;
+            int i = Integer.parseInt(dc.getDeskNo()) % portSize;
+            if(dc.getDeskNo().length()==1){
+                dc.setDeskNo("0"+dc.getDeskNo());
+            }
             uri += ":" + ports[i];
             uri += "/index/api/addStreamProxy?vhost=__defaultVhost__&app=normal";
-            uri += "&stream=classroom"+dc.getClassRoom()+"-camera"+dc.getCreamerName();
+            uri += "&stream=classroom"+dc.getClassRoom()+"-desktop"+ dc.getDeskNo();
             uri += "&url=rtsp://admin:a1234567@"+dc.getIp();
             uri += "&push_url=''&pull_time=300&enable_rtsp=1&enable_rtmp=1&rtp_type=0&secret=035c73f7-bb6b-4889-a715-d9eb2d1925cc";
             URL url = new URL(uri);
