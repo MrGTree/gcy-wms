@@ -111,7 +111,7 @@ public class VideoAnalizyUtils {
         StPointF[] keypoints = crowdResult.getKeypoints();
         //初始化有效的manList
         ArrayList<Man> manList = new ArrayList<>();
-        if (keypoints != null && keypoints.length > 1) {
+        if (keypoints != null) {
             for (int j = 0; j < keypoints.length; j++) {
                 float[] pointsScore = crowdResult.getPointsScore();
                 float score = pointsScore[j];
