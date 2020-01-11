@@ -1,5 +1,23 @@
 package com.thinkgem.jeesite.common.utils;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.Raster;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.opencv.core.Core.addWeighted;
+import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.core.CvType.CV_8UC3;
+import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
+import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
 import com.sensetime.ad.sdk.StPointF;
 import com.thinkgem.jeesite.common.config.Global;
@@ -26,25 +44,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.TextMessage;
 
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferByte;
-import java.awt.image.Raster;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.opencv.core.Core.addWeighted;
-import static org.opencv.core.CvType.CV_32F;
-import static org.opencv.core.CvType.CV_8UC3;
-import static org.opencv.imgproc.Imgproc.COLORMAP_JET;
-import static org.opencv.imgproc.Imgproc.FONT_HERSHEY_SIMPLEX;
-
 /**
  * @author liuji
  * @create 2019-11-28 18:39
@@ -60,6 +59,8 @@ public class VideoAnalizyUtils {
     private static final Scalar white = new Scalar(255, 255, 255);//白色
     private static final Scalar red = new Scalar(0, 0, 255);//红色
     private static final Scalar blue = new Scalar(255, 0, 0);//蓝色
+
+    private static final int breakTimes = Integer.valueOf(Global.getConfig("video.monitor.break.times"));
 
     private static Float useScore = Global.getUseScore();
 
@@ -159,7 +160,7 @@ public class VideoAnalizyUtils {
                                 continue;
                             } else {
                                 int time = closeManOn.getTime();
-                                if (time >= 4) {
+                                if (time >= breakTimes) {
                                     logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn, time + 1, distance);
                                     threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult, orgWidth, orgHeight, urlMapper));
                                     threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
