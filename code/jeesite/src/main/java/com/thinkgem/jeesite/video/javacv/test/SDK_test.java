@@ -1,5 +1,11 @@
 package com.thinkgem.jeesite.video.javacv.test;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+
 import com.sensetime.ad.core.StCrowdDensityDetector;
 import com.sensetime.ad.core.StFaceException;
 import com.sensetime.ad.sdk.StCrowdDensityResult;
@@ -12,12 +18,6 @@ import com.thinkgem.jeesite.video.javacv.Entity.UrlMapper;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
 public class SDK_test {
     static {
@@ -39,12 +39,12 @@ public class SDK_test {
 
         int[] retCode = new int[1];
         String lic = readToString(LICENSE_PATH);
-        String activeCode = StLibrary.onlineActivite("", lic, retCode);
+        String activeCode = StLibrary.generateActivationCode("", lic, retCode);
         if (retCode[0] != 0) {
             System.out.println("get online activation code failed, rc = " + retCode[0]);
             return;
         }
-        retCode[0] = StLibrary.addLic("", lic, activeCode);
+        retCode[0] = StLibrary.checkActivationCode("", lic, activeCode);
         if (retCode[0] != 0) {
             System.out.println("add lic failed, rc = " + retCode[0]);
             return;

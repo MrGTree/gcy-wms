@@ -1,6 +1,10 @@
 package com.thinkgem.jeesite.video;
 
 
+import java.util.Set;
+
+import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
+import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
 import com.sensetime.ad.sdk.StLibrary;
 import com.thinkgem.jeesite.common.config.Global;
 import com.thinkgem.jeesite.common.utils.FileUtils;
@@ -18,11 +22,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
-
-import java.util.Set;
-
-import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
-import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
 
 /**
  * 项目启动时就开启线程分析视频是否违规
@@ -52,13 +51,13 @@ public class StartAnalizyOnSpringStart implements ApplicationListener<ContextRef
             String lic = FileUtils.readToString(Global.getConfig("video.monitor.license.path"));
             String activeCode = FileUtils.readToString(Global.getConfig("video.monitor.activecode.path"));
             if (StringUtils.isBlank(activeCode)){
-                activeCode = StLibrary.onlineActivite("", lic, retCode);
+                activeCode = StLibrary.generateActivationCode ("", lic, retCode);
                 FileUtils.writeToFile(Global.getConfig("video.monitor.activecode.path"),activeCode,false);
             }
             if (retCode[0] != 0) {
                 logger.error("get online activation code failed, rc = " + retCode[0]);
             }
-            retCode[0] = StLibrary.addLic("", lic, activeCode);
+            retCode[0] = StLibrary.checkActivationCode("", lic, activeCode);
             if (retCode[0] != 0) {
                 logger.error("add lic failed, rc = " + retCode[0]);
             }
