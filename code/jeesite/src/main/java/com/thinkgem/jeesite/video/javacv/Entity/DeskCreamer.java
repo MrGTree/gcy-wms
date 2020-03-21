@@ -1,6 +1,10 @@
 package com.thinkgem.jeesite.video.javacv.Entity;
 
+import com.sensetime.ad.sdk.StPointF;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 桌面摄像头类,读取配置文件
@@ -11,8 +15,10 @@ public class DeskCreamer {
     private String creamerName;   //桌面摄像头号
     private String deskNo;    //考桌编号
     private String ip;        //桌面摄像头ip
-    private float dcX;      //桌面摄像头x坐标
-    private float dcY;      //桌面摄像头y坐标
+    private String lastSendTime; //上次发送时间戳
+    private String topLine;  //范围线
+    private List<StPointF> range; //范围
+    private String resolution; //分辨率
 
     public String getClassRoom() {
         return classRoom;
@@ -46,28 +52,36 @@ public class DeskCreamer {
         this.ip = ip;
     }
 
-    public float getDcX() {
-        return dcX;
+    public String getLastSendTime() {
+        return lastSendTime;
     }
 
-    public void setDcX(float dcX) {
-        this.dcX = dcX;
+    public void setLastSendTime(String lastSendTime) {
+        this.lastSendTime = lastSendTime;
     }
 
-    public float getDcY() {
-        return dcY;
+    public String getTopLine() {
+        return topLine;
     }
 
-    public void setDcY(float dcY) {
-        this.dcY = dcY;
+    public void setTopLine(String topLine) {
+        this.topLine = topLine;
     }
 
-    public DeskCreamer(String creamerName, String deskNo, String ip, float dcX, float dcY) {
-        this.creamerName = creamerName;
-        this.deskNo = deskNo;
-        this.ip = ip;
-        this.dcX = dcX;
-        this.dcY = dcY;
+    public List<StPointF> getRange() {
+        return range;
+    }
+
+    public void setRange(List<StPointF> range) {
+        this.range = range;
+    }
+
+    public String getResolution() {
+        return resolution;
+    }
+
+    public void setResolution(String resolution) {
+        this.resolution = resolution;
     }
 
     public DeskCreamer() {
@@ -76,11 +90,14 @@ public class DeskCreamer {
     @Override
     public String toString() {
         return "DeskCreamer{" +
-                "creamerName='" + creamerName + '\'' +
+                "classRoom='" + classRoom + '\'' +
+                ", creamerName='" + creamerName + '\'' +
                 ", deskNo='" + deskNo + '\'' +
                 ", ip='" + ip + '\'' +
-                ", dcX=" + dcX +
-                ", dcY=" + dcY +
+                ", lastSendTime='" + lastSendTime + '\'' +
+                ", topLine='" + topLine + '\'' +
+                ", range=" + range +
+                ", resolution='" + resolution + '\'' +
                 '}';
     }
 }
