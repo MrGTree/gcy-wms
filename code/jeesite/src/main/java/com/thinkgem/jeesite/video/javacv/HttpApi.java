@@ -2,6 +2,7 @@ package com.thinkgem.jeesite.video.javacv;
 
 
 import com.thinkgem.jeesite.common.config.Global;
+import com.thinkgem.jeesite.common.utils.StringUtils;
 import com.thinkgem.jeesite.video.javacv.Entity.DeskCreamer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ public class HttpApi {
 
     private static String[] ports = null;
 
-    private static int recTime = 0;
+    private static int recTime = 60;
 
     private static String uri = "http://192.168.1.250";
 
@@ -31,9 +32,9 @@ public class HttpApi {
             String s = Global.getConfig("video.monitor.deskCamera.port");
             ports = s.split(",");
         }
-        if(recTime == 0){
-            String recTimeStr = Global.getConfig("video.monitor.deskCamera.recTime");
-            logger.warn("获取配置文件录制时长：{}",recTime);
+        String recTimeStr = Global.getConfig("video.monitor.deskCamera.recTime");
+        if(!StringUtils.isEmpty(recTimeStr)){
+            logger.warn("获取配置文件录制时长：{}",recTimeStr);
             recTime = Integer.parseInt(recTimeStr.trim());
         }
     }
@@ -82,7 +83,9 @@ public class HttpApi {
         } catch (Exception e) {
             e.printStackTrace();
         }finally {
-            br.close();
+            if(br!=null){
+                br.close();
+            }
         }
     }
 
