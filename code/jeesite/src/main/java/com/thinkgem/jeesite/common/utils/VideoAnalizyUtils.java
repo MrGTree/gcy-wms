@@ -62,6 +62,8 @@ public class VideoAnalizyUtils {
 
     private static final int breakTimes = Integer.valueOf(Global.getConfig("video.monitor.break.times"));
 
+    private static final double oneManValue = Global.getOneManValue();
+
     private static Float useScore = Global.getUseScore();
 
     public static void sendPicture(int width, int height, String camerName, byte[] bytes, StCrowdDensityResult crowdResult, UrlMapper urlMapper, int orgWidth, int orgHeight) {
@@ -149,7 +151,16 @@ public class VideoAnalizyUtils {
                 }
 
                 //距离小于 200 像素
-                if (distance < tooCloseValue) {
+                if (distance > oneManValue && distance < tooCloseValue ) {
+                    logger.error("tooCloseValue && OneManValue !!!WARNING! camera {} this man {} too close with {} ,distance is {},crowdResult.getNumberOfPeople is {},getKeypoints is {}", urlMapper.getCamerName(), manOut, manIn, distance,crowdResult.getNumberOfPeople(),JsonMapper.getInstance().toJson(crowdResult.getKeypoints()));
+                    if (breakTimes <= 1){
+                        logger.error("analizy break the rule !!!WARNING! camera {} this man {} too close with {} last {} ,distance is {}", urlMapper.getCamerName(), manOut, manIn,1, distance);
+                        threadPoolTaskExecutor.execute(new BreakRulePushMessage(width, height, manOut, manIn, urlMapper.getCamerName(), bytes, crowdResult, orgWidth, orgHeight, urlMapper));
+                        threadPoolTaskExecutor.execute(new PushVideoHandler(urlMapper));
+                        //清空map
+                        closeRelationMap.clear();
+                        return true;
+                    }
                     if (closeRelation != null) {
                         Set<CloseMan> closeManSet = closeRelation.getCloseManSet();
                         if (closeManSet != null && !closeManSet.isEmpty()) {
