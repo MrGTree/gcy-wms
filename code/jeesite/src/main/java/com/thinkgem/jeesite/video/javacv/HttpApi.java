@@ -25,9 +25,20 @@ public class HttpApi {
 
     private static int recTime = 60;
 
-    private static String uri = "http://192.168.1.250";
+    private static String uri = "http://192.168.8.212";
+
+    private static String uNameAndPwd = "admin:abc12345";
+
 
     static {
+        String newUri = Global.getConfig("video.monitor.deskCamera.uri");
+        if(StringUtils.isNotEmpty(newUri)){
+            uri = newUri;
+        }
+        String newUNameAndPwd = Global.getConfig("video.monitor.deskCamera.uNameAndPwd");
+        if(StringUtils.isNotEmpty(newUNameAndPwd)){
+            uNameAndPwd = newUNameAndPwd;
+        }
         if(ports==null || ports.length==0){
             String s = Global.getConfig("video.monitor.deskCamera.port");
             ports = s.split(",");
@@ -61,9 +72,10 @@ public class HttpApi {
             tempUrl += ":" + ports[i];
             tempUrl += "/index/api/addStreamProxy?vhost=__defaultVhost__&app=normal";
             tempUrl += "&stream=classroom"+dc.getClassRoom()+"-desktop"+ dc.getDeskNo();
-            tempUrl += "&url=rtsp://admin:a1234567@"+dc.getIp();
+            tempUrl += "&url=rtsp://" + uNameAndPwd + "@"+dc.getIp();
             tempUrl += "&push_url=''&pull_time=" + recTime;
             tempUrl += "&enable_rtsp=1&enable_rtmp=1&rtp_type=0&secret=035c73f7-bb6b-4889-a715-d9eb2d1925cc";
+            logger.warn("url:{}",tempUrl);
             URL url = new URL(tempUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
