@@ -26,8 +26,6 @@ public class HttpMethodPushVideo {
 
     private static String pushVideoUrl = Global.getConfig("video.monitor.push.rule.url");
 
-    private static final String[] ports = {"9088","9088","9088","9089","9089","9089","9089","9089","9089","9090","9090","9090","9090","9090","9090"};
-
     static {
         requestMap.put("type", 1);
         requestMap.put("vhost", "__defaultVhost__");
@@ -49,7 +47,6 @@ public class HttpMethodPushVideo {
         //continue_record	Y	流注销时是否继续等待录制还是立即停止录制	0/1
         Map<String, Object> reqMap = new HashMap<>(requestMap);
         reqMap.put("stream", StringUtils.substringAfterLast(urlMapper.getInputUrl(), "/"));
-        reqMap.put("port", ports[Integer.valueOf(urlMapper.getCamerName()) - 1]);
         logger.info("reqMap:{},pushVideoUrl:{}", reqMap, pushVideoUrl);
         ResponseEntity<PushVideoReturn> response = restTemplate.getForEntity(pushVideoUrl, PushVideoReturn.class, reqMap);
         logger.error("pushBreakRuleVideo response:{}", response);

@@ -22,7 +22,7 @@ public class PushVideoHandler implements Runnable {
         try {
             HttpMethodPushVideo.pushBreakRuleVideo(urlMapper);
         } catch (Exception e) {
-            logger.error("fFmpegShellPushVideo.pushBreakRuleVideo:", e);
+            logger.error("HttpMethodPushVideo.pushBreakRuleVideo:", e);
         }
     }
 }
