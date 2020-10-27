@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: wms
+
+  datasource:
+    username: test_bi
+    password: 123456
+    url: jdbc:oracle:thin:@10.33.130.100:1521:orcl
+    driver-class-name: oracle.jdbc.driver.OracleDriver
+    type: com.alibaba.druid.pool.DruidDataSource
+    validationQuery: SELECT 'x' FROM DUAL
+    testOnBorrow: true
+    testOnReturn: true
+    testWhileIdle: true
+    timeBetweenEvictionRunsMillis: 60000
+    maxPoolPreparedStatementPerConnectionSize: 60
+    poolPreparedStatements: true
+    maxActive: 2000
+    initial-size: 1
+
+server:
+  port: 8080
+  servlet:
+    context-path: /wms
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
